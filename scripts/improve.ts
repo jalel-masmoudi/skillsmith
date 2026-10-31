@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TrueForge } from "@truefoundry/trueforge-sdk";
 import type { Forge } from "./improve-loop.ts";
-import { commitChecked, improveRun } from "./improve-loop.ts";
+import { commitChecked, improveRun, SKILL_PATH } from "./improve-loop.ts";
 import type { ResultRow, TraceSession } from "./improve-loop.ts";
 import {
   client,
@@ -103,7 +103,7 @@ try {
     commit: flag("no-commit")
       ? undefined
       : (message) => {
-          const spec = ["agent", `runs/run-${nn}/improve-session.json`, `runs/run-${nn}/diagnose-session.json`];
+          const spec = [SKILL_PATH, `runs/run-${nn}/improve-session.json`, `runs/run-${nn}/diagnose-session.json`];
           commitChecked(git, message, spec);
           console.log(`\nCommitted the agent's change.\n${message}`);
           console.log("Review it: git show    Drop it: git reset --hard HEAD~1    Then: npm run run-evals");

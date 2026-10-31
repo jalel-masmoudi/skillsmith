@@ -43,8 +43,10 @@ export interface Forge {
   rewrite(prompt: string): Promise<{ sessionId: string; text: string }>;
 }
 
-const SKILL_PATH = "agent/skills/fitforge-notes/SKILL.md";
-const ALLOWED = /^agent\/skills\/[a-z0-9][a-z0-9-]*\/SKILL\.md$/;
+export const SKILL_PATH = "agent/skills/fitforge-notes/SKILL.md";
+const ALLOWED = /^agent\/skills\/fitforge-notes\/SKILL\.md$/;
+const TRACE_CHARS = 400;
+const REPLY_CHARS = 160;
 
 export function toolTrace(events: readonly object[] | undefined): string {
   const lines: string[] = [];
@@ -60,13 +62,13 @@ export function toolTrace(events: readonly object[] | undefined): string {
       for (const c of calls) {
         const info = c.toolInfo ?? c.tool_info;
         const name = info?.name ?? c.function?.name ?? "tool";
-        lines.push(`call ${name} ${c.function?.arguments ?? ""}`.slice(0, 240));
+        lines.push(`call ${name} ${c.function?.arguments ?? ""}`.slice(0, 160));
       }
     } else if (rec.type === "tool.response") {
-      lines.push(`result ${String(rec.content ?? "").slice(0, 360)}`);
+      lines.push(`result ${String(rec.content ?? "").slice(0, 120)}`);
     }
   }
-  return lines.join("\n").slice(0, 1800);
+  return lines.join("\n").slice(0, TRACE_CHARS);
 }
 
 export function classifyTrain(results: ResultRow[], tasks: Map<string, Task>, session: TraceSession): TrainItem[] {
@@ -87,7 +89,7 @@ export function classifyTrain(results: ResultRow[], tasks: Map<string, Task>, se
       score: r.score,
       actual_calls: r.actual_calls,
       best_calls: r.best_calls,
-      replyTail: (r.reply ?? "").slice(-400),
+      replyTail: (r.reply ?? "").slice(-REPLY_CHARS),
       trace: toolTrace(r.turn_id ? turns.get(r.turn_id) : []),
     });
   }
@@ -171,7 +173,7 @@ export function holdoutHits(prompt: string, tasks: { id: string; holdout?: boole
 /** First line only, capped, and never a trailer or a leak. */
 export function sanitizeLearned(raw: string, tasks: { id: string; question: string; answer?: number | string }[]): string {
   const line = (raw.split(/\r?\n/).find((s) => s.trim()) ?? "").trim().slice(0, 200);
-  const banned = /co-authored|claude|cursor|copilot|antigravity/i;
+  const banned = /co-authored|claude|copilot|antigravity|anthropic|openai|\bgpt|gemini|\bai\b|\bllm\b|\bcursor\b(?!_)/i;
   if (!line || /^[\w-]+:\s/.test(line) || banned.test(line) || findLeaks(line, tasks.map((t) => ({ id: t.id, question: t.question, answer: t.answer ?? "" }))).length) {
     return "(no summary given)";
   }
@@ -195,9 +197,12 @@ export function skillCommitMessage(nn: string, learned: string, sessionId: strin
 export function commitChecked(runGit: (...args: string[]) => string, message: string, spec: string[]): void {
   runGit("add", "--", ...spec);
   const staged = runGit("diff", "--cached", "--name-only").split(/\r?\n/).map((s) => s.trim().replaceAll("\\", "/")).filter(Boolean);
-  const ok = (name: string) => name.startsWith("agent/") || spec.includes(name);
+  const ok = (name: string) => spec.includes(name);
   const bad = staged.filter((name) => !ok(name));
-  if (bad.length) throw new Error(`refusing to commit ${bad.join(", ")}`);
+  if (bad.length) {
+    runGit("reset", "-q", "--", ...spec);
+    throw new Error(`refusing to commit ${bad.join(", ")}`);
+  }
   runGit("commit", "-q", "-m", message, "--", ...spec);
 }
 

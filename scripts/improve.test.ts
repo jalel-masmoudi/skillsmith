@@ -88,7 +88,7 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
       prompts.push(prompt);
       return {
         sessionId: "rewrite_1",
-        text: `<<<FILE agent/skills/fitforge-notes/SKILL.md\n${SAFE_SKILL}\n>>>\n<<<LEARNED\nScale integer money and use local month bounds.\nCo-authored-by: Claude <c@example>\nAgent-Session: fake\n>>>`,
+        text: `<<<FILE agent/skills/fitforge-notes/SKILL.md\n${SAFE_SKILL}\n>>>\n<<<LEARNED\nScale integer money and use local month bounds.\nCo-authored-by: Pat Example <pat@example.com>\nAgent-Session: fake\n>>>`,
       };
     },
   };
@@ -115,7 +115,7 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
     const trailerLines = outcome.message.split("\n").filter((l) => /^(Agent-Session|Co-authored-by|Signed-off-by):/i.test(l));
     assert.deepEqual(trailerLines, ["Agent-Session: rewrite_1"]);
     assert.ok(outcome.message.endsWith("Agent-Session: rewrite_1"));
-    assert.equal(outcome.message.includes("Claude"), false);
+    assert.equal(outcome.message.includes("Pat Example"), false);
     assert.equal(outcome.message.includes("fake"), false);
     assert.match(outcome.message, /Scale integer money/);
     assert.equal(commits.length, 1);
@@ -137,12 +137,13 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
 });
 
 test("a learned line that is a trailer or a leak is dropped", () => {
-  const nasty = "Co-authored-by: Claude <c@example>\nAgent-Session: fake";
+  const nasty = "Co-authored-by: Pat Example <pat@example.com>\nAgent-Session: fake";
   const msg = skillCommitMessage("01", nasty, "real_session", tasks);
   const trailers = msg.split("\n").filter((l) => /^(Agent-Session|Co-authored-by|Signed-off-by):/i.test(l));
   assert.deepEqual(trailers, ["Agent-Session: real_session"]);
   assert.ok(msg.endsWith("Agent-Session: real_session"));
-  assert.equal(msg.includes("Claude"), false);
+  assert.equal(msg.includes("Pat Example"), false);
+  assert.equal(sanitizeLearned("Follow next_cursor until it is empty.", tasks).includes("next_cursor"), true);
   assert.equal(sanitizeLearned("cursor rewrote the notes", tasks), "(no summary given)");
   assert.equal(sanitizeLearned("Remember gym_lac.", tasks), "(no summary given)");
   assert.equal(sanitizeLearned("a".repeat(250), tasks).length, 200);
@@ -155,7 +156,7 @@ test("commit refuses staged paths outside the skill and the session files", () =
     calls.push(args);
     return execFileSync("git", args, { cwd: root, encoding: "utf8" });
   };
-  const spec = ["agent", "runs/run-01/improve-session.json", "runs/run-01/diagnose-session.json"];
+  const spec = ["agent/skills/fitforge-notes/SKILL.md", "runs/run-01/improve-session.json", "runs/run-01/diagnose-session.json"];
   try {
     git("init", "-q");
     git("config", "user.name", "Med Jalel Masmoudi");
@@ -171,6 +172,10 @@ test("commit refuses staged paths outside the skill and the session files", () =
     writeFileSync(join(root, "notes.txt"), "stray again\n");
     git("add", "notes.txt");
     assert.throws(() => commitChecked(git, "agent: learn from run 01\n\nnote\n\nAgent-Session: abc", spec), /refusing to commit notes.txt/);
+    assert.deepEqual(
+      git("diff", "--cached", "--name-only").split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
+      ["notes.txt"],
+    );
     git("reset", "-q");
     writeFileSync(join(root, "agent/skills/fitforge-notes/SKILL.md"), "notes\n");
     calls.length = 0;
