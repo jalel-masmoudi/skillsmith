@@ -1,0 +1,9 @@
+{
+  "id": "09-lac-march-refunds",
+  "title": "Lac March refunds",
+  "holdout": false,
+  "question": "What is the total of refunds at FitForge Lac during March 2026 (Africa/Tunis), in TND? Use the refund timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 95,
+  "best_calls": 2
+}

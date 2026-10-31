@@ -1,6 +1,6 @@
 {
-  "name": "code-reviewer",
-  "description": "Reviews a small code change and lists the real problems in it, as JSON.",
+  "name": "skillsmith",
+  "description": "Answers questions about the FitForge gym tools. It keeps a short skill and rewrites that skill from its own misses.",
   "model": {
     "name": "anthropic/claude-sonnet-4-6",
     "params": { "temperature": 0 }

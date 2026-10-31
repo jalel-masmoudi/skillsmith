@@ -1,0 +1,9 @@
+{
+  "id": "07-youssef-sfax-status",
+  "title": "Youssef Hammami at Sfax",
+  "holdout": false,
+  "question": "What is the membership status of Youssef Hammami at FitForge Sfax? Answer with the status.",
+  "answer_type": "text",
+  "answer": "frozen",
+  "best_calls": 3
+}

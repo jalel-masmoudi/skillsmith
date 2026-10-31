@@ -1,0 +1,9 @@
+{
+  "id": "12-lac-march-invoices",
+  "title": "Lac March invoices",
+  "holdout": false,
+  "question": "How many invoices were issued at FitForge Lac during March 2026 (Africa/Tunis), excluding void invoices? Use the invoice timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 7,
+  "best_calls": 3
+}

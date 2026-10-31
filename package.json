@@ -1,8 +1,8 @@
 {
-  "name": "trueforge-starter",
+  "name": "skillsmith",
   "version": "0.1.0",
   "private": true,
-  "description": "Starter repo for the Stranger Builds TrueForge challenge: an agent that gets better every time it runs.",
+  "description": "SkillSmith: an agent that writes its own manual for the FitForge gym API.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -14,6 +14,10 @@
     "improve": "tsx scripts/improve.ts",
     "export-session": "tsx scripts/export-session.ts",
     "score": "tsx evals/score.ts",
+    "mcp": "tsx mcp/server.ts",
+    "mcp:stdio": "tsx mcp/server.ts --stdio",
+    "generate": "tsx scripts/generate-fitforge.ts",
+    "test": "tsx --test mcp/server.test.ts evals/score.test.ts evals/ground-truth.test.ts scripts/leaks.test.ts scripts/calls.test.ts && tsx evals/score.ts --selftest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

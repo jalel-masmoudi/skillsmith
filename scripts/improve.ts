@@ -6,10 +6,12 @@
 //      and asks it for new versions of agent/instructions.md and agent/skills/*/SKILL.md.
 //   3. Writes the files and commits them with the trailer "Agent-Session: <session_id>".
 // You review the commit (git show) and keep it or drop it (git reset --hard HEAD~1). You don't edit it.
+// The right answer is not included in the prompt.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import type { TaskScore } from "../evals/score.ts";
+import { findLeaks } from "./leaks.ts";
 import {
   client,
   die,
@@ -18,7 +20,6 @@ import {
   git,
   isClean,
   loadTasks,
-  numbered,
   option,
   readAgent,
   ROOT,
@@ -58,39 +59,35 @@ const currentFiles = [
 const feedback = failed
   .map((r) => {
     const t = tasks.get(r.task_id)!;
-    const missed = r.missed.map((m) => `  - missed: line ${m.line} (${m.categories.join(" or ")}): ${m.why}`);
-    const noise = r.noise.map((n) => `  - not a real problem: line ${n.line} (${n.category})${n.comment ? `: ${n.comment}` : ""}`);
     return [
-      `### ${t.filename} — score ${r.score.toFixed(2)}${r.parsed ? "" : " — your reply had no valid ```json block with \"findings\""}`,
-      "```" + t.language,
-      numbered(t.code),
-      "```",
+      `### ${t.id} — score ${r.score.toFixed(2)}${r.parsed ? "" : " — your reply had no valid ```json block with \"answer\""}`,
+      r.correct ? "The answer matched." : "The answer did not match.",
+      `Tool calls: ${r.actual_calls} (a short solution uses ${r.best_calls}).`,
+      "Question:",
+      t.question,
       "Your reply ended with:",
       "```",
       r.reply.slice(-1500) || "(empty reply)",
       "```",
-      "The scorer says:",
-      ...missed,
-      ...noise,
     ].join("\n");
   })
   .join("\n\n");
 
-const prompt = `This message is not a code review. Ignore the Output section of your instructions for this reply.
+const prompt = `This message is not a FitForge question. Ignore the Output section of your instructions for this reply.
 
-You are improving your own playbook. Below are your current instruction files, then the reviews you got wrong in your last evaluation run, with what the scorer said.
+You are improving your own notes. Below are your current instruction files, then the questions you got wrong in your last evaluation run. You are not shown the right answer.
 
-Rewrite your files so that next time you catch the kinds of problems you missed and stop making the kinds of comments that were not real problems.
+Rewrite your files so that next time you avoid that kind of miss and use fewer tool calls when you can.
 
 Rules:
-- Write general rules that would help on code you have never seen. Never mention these files, file names, task names, function names or line numbers.
+- Write general notes about how the tools behave. Never paste a question, a task id, an answer, or a name or id from the data.
 - Keep what works. Change only what the failures show is wrong or missing. Keep the Output section of instructions.md exactly as it is: the scorer depends on it.
-- Short beats long: a checklist item is one line, with what to look for.
+- Short beats long.
 - You may edit agent/instructions.md and any agent/skills/<name>/SKILL.md (keep the frontmatter). Leave out files you don't change.
 
 Reply with each changed file in full, in this format, and nothing else:
 
-<<<FILE agent/skills/review-checklist/SKILL.md
+<<<FILE agent/skills/fitforge-notes/SKILL.md
 (the whole new file)
 >>>
 <<<LEARNED
@@ -111,14 +108,24 @@ ${feedback}
 const tf = client();
 const coach = flag("coach");
 const { data: session } = await tf.sessions.create({
-  // The agent itself (by name), or a coach: an inline TrueForge agent on the same model.
   agent: coach
-    ? { spec: { model: agent.model, instructions: "You coach a code-review agent: you rewrite its instruction files from its failed runs.", config: { askUserQuestions: { enabled: false }, generativeUi: { enabled: false } } } }
+    ? {
+        spec: {
+          model: agent.model,
+          instructions: "You coach an agent that answers questions about FitForge. You rewrite its instruction files from its failed runs.",
+          config: {
+            askUserQuestions: { enabled: false },
+            generativeUi: { enabled: false },
+            dynamicSubAgents: { enabled: false },
+            webSearch: { enabled: false },
+          },
+        },
+      }
     : { name: agent.name },
   metadata: { purpose: "improve", learned_from_run: nn },
 });
 await tf.sessions.update(session.id, { title: `improve from run ${nn}` });
-console.log(`Asking ${coach ? "the coach" : `"${agent.name}"`} to rewrite its playbook from ${failed.length} failed tasks (session ${session.id})…`);
+console.log(`Asking ${coach ? "the coach" : `"${agent.name}"`} to rewrite its notes from ${failed.length} failed tasks (session ${session.id})…`);
 
 const turn = await runTurn(tf, session.id, prompt, false);
 if (turn.status !== "done") die(`The turn ended with status ${turn.status}${turn.error ? `: ${turn.error}` : ""}`);
@@ -134,11 +141,12 @@ for (const f of files) {
   if (!allowed.test(f.path)) die(`The agent tried to write ${f.path}. Only agent/instructions.md and agent/skills/<name>/SKILL.md are allowed.`);
 }
 
-// Overfitting guard: the new playbook must not quote the eval tasks.
+// Overfitting guard: no task text, no fixture name or id. Schema words such as
+// "frozen" stay allowed. Short answers count only next to a name.
 const leaks: string[] = [];
-for (const t of loadTasks()) {
-  const quotes = [t.id, t.filename, ...t.expected.map((e) => t.code[e.line - 1].trim()).filter((l) => l.length >= 16)];
-  for (const f of files) for (const q of quotes) if (f.text.includes(q)) leaks.push(`${f.path} quotes "${q}"`);
+const taskList = loadTasks();
+for (const f of files) {
+  for (const hit of findLeaks(f.text, taskList)) leaks.push(`${f.path} quotes "${hit.slice(0, 80)}"`);
 }
 if (leaks.length && !flag("allow-leaks")) die(`The change quotes the eval tasks, so it would overfit:\n  ${leaks.join("\n  ")}\nRun improve again (or pass --allow-leaks to keep it anyway).`);
 
@@ -148,7 +156,7 @@ for (const f of files.filter((f) => f.path.endsWith("/SKILL.md"))) {
   }
 }
 const newInstructions = files.find((f) => f.path === "agent/instructions.md");
-if (newInstructions && !newInstructions.text.includes('"findings"')) {
+if (newInstructions && !newInstructions.text.includes('"answer"')) {
   die("The new instructions.md dropped the JSON output format the scorer needs. Run improve again.");
 }
 

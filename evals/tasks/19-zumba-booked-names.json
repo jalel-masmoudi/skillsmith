@@ -1,0 +1,9 @@
+{
+  "id": "19-zumba-booked-names",
+  "title": "Zumba booked names",
+  "holdout": true,
+  "question": "Which members have a non-cancelled booking for Zumba at FitForge Sfax on 2 April 2026 (Africa/Tunis)? Answer with full names, comma-separated, alphabetical.",
+  "answer_type": "text",
+  "answer": "Ahmed Ben Youssef, Bilel Trabelsi, Hayet Khemiri, Nadia Jmal, Youssef Hammami",
+  "best_calls": 4
+}

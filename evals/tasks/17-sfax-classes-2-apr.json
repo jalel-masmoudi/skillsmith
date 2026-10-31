@@ -1,0 +1,9 @@
+{
+  "id": "17-sfax-classes-2-apr",
+  "title": "Sfax classes on 2 April",
+  "holdout": true,
+  "question": "How many classes at FitForge Sfax start on 2 April 2026 (Africa/Tunis) and are not cancelled? Answer with a number.",
+  "answer_type": "number",
+  "answer": 2,
+  "best_calls": 2
+}

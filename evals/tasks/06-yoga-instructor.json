@@ -1,0 +1,9 @@
+{
+  "id": "06-yoga-instructor",
+  "title": "Morning Yoga instructor",
+  "holdout": false,
+  "question": "Who teaches Morning Yoga at FitForge Lac on 15 March 2026 (Africa/Tunis)? Answer with the instructor's full name.",
+  "answer_type": "text",
+  "answer": "Sarra Ben Romdhane",
+  "best_calls": 2
+}

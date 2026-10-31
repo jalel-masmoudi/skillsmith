@@ -1,0 +1,9 @@
+{
+  "id": "01-lac-current-members",
+  "title": "Current members at Lac",
+  "holdout": false,
+  "question": "How many current members does FitForge Lac have? Current means status active and no deletion timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 6,
+  "best_calls": 3
+}

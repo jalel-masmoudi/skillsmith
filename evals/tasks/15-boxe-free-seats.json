@@ -1,0 +1,9 @@
+{
+  "id": "15-boxe-free-seats",
+  "title": "Free seats in Boxe",
+  "holdout": true,
+  "question": "How many seats are still free in Boxe at FitForge Lac on 15 March 2026 (Africa/Tunis)? Free means capacity minus non-cancelled bookings. Answer with a number.",
+  "answer_type": "number",
+  "answer": 14,
+  "best_calls": 3
+}
