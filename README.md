@@ -16,10 +16,10 @@ The skill at `agent/skills/fitforge-notes/SKILL.md` is an empty seed. Nothing in
 > Fill this in after the first measured runs. Five lines max. Keep the heading: the challenge checks for it.
 
 - **Task and score:** 20 FitForge questions (14 train, 6 holdout). Wrong, or a right answer with zero tool calls when the reference uses tools, scores 0. Otherwise a right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. Run score = `100 × mean`.
-- **Run 1 → run N:** not run yet. This change has no model key.
-- **The change that did it:** none yet.
-- **What the agent learned:** nothing yet. The skill file is still empty.
-- **What still fails:** the whole set. Run 1 has not happened.
+- **Run 1 → run N:** Run 1 scored 75.96 (`runs/summary.csv`). A later run has not been counted yet.
+- **The change that did it:** none yet. The skill file is still the empty seed.
+- **What the agent learned:** nothing yet.
+- **What still fails:** training tasks 02 and 12 were wrong. Other training tasks were right but used extra calls. Holdout tasks 16 and 20 were also wrong; `npm run improve` does not show them.
 
 ## What the challenge asks
 
@@ -88,13 +88,15 @@ npm run setup
 
 Add a model under Settings → Models and set `TF_MODEL` if you are not using `anthropic/claude-sonnet-4-6`. Model keys go in the TrueForge UI, not in this repo.
 
-**5. Run 1, then let the agent edit its skill**
+**5. Run the evals, then let the agent edit its skill**
 
 ```bash
-npm run run-evals
+npm run eval
 npm run improve
-npm run run-evals
+npm run eval
 ```
+
+`npm run eval` is the same command as `npm run run-evals`.
 
 After run 1, do not change `evals/` again. Same tasks, same scorer, every run.
 
@@ -112,7 +114,7 @@ Question text is in [docs/QUESTIONS.md](docs/QUESTIONS.md). How the server runs,
 
 **`npm run improve`**
 
-Shows the failed training questions (never the holdout), whether the answer matched, and the call counts. It does not show the stored answer. The agent may change only `agent/instructions.md` and `agent/skills/<name>/SKILL.md`. The new text must not quote a task id, a question, or a fixture name or id. Short answers count only when they sit next to a name. Schema words such as frozen or closed stay allowed. The commit trailer is `Agent-Session: <session_id>`.
+See [How the agent improves itself](#how-the-agent-improves-itself).
 
 **`npm run score -- --selftest`** checks perfect, wrong, unparseable, and wasteful replies. **`npm run score -- runs/run-NN`** re-scores a saved run.
 
@@ -134,9 +136,40 @@ Per question: 0 if the answer is missing, wrong, or right with zero tool calls w
 - Ground truth matches the committed task files, including the six holdout ids.
 - HTTP and stdio speak MCP to this process. Tool descriptions stay short. List pages, millime amounts, deleted members, and cancelled bookings behave as the tests describe.
 
-Not verified: a live TrueForge server, connector registration, a real model, `skill_mode: "git"`, or the Linux sandbox packages. Details in [docs/MCP.md](docs/MCP.md).
+Not verified here: a live model call. `npm run improve` is checked against the saved run 1 fixture. Details of the server are in [docs/MCP.md](docs/MCP.md).
 
-The next edit policy (trace subagents, one small skill edit, keep it only if the train score rises) is in [docs/DESIGN.md](docs/DESIGN.md). It is not built yet.
+## How the agent improves itself
+
+On Windows, use two terminals in this repo.
+
+Gym server, leave it running. It listens on port 8787:
+
+```bat
+npm run mcp
+```
+
+TrueForge, with this machine allowed to call that port:
+
+```bat
+scripts\trueforge.cmd
+```
+
+That file sets `OUTBOUND_URL_ALLOWED_HOSTS` to `["127.0.0.1","localhost"]` and starts TrueForge. After a model is configured:
+
+```bat
+npm run setup
+npm run eval
+npm run improve
+git show
+npm run eval
+```
+
+`npm run improve` reads the latest `runs/run-NN`. It keeps two training groups and drops holdouts 15–20 (their questions, answers, and traces):
+
+1. **Misses.** The answer did not match. On run 1 those are tasks 02 and 12.
+2. **Extra calls.** The answer matched, and the run used more calls than a short solution.
+
+A diagnosis session has subagents turned on and is told to spawn one subagent per task. The agent then rewrites `agent/skills/fitforge-notes/SKILL.md`. The leak guard rejects the edit if it copies questions, names, or ids. A clean edit is committed. The message ends with `Agent-Session:` and the rewrite session id. `git show` reviews it. `git reset --hard HEAD~1` drops it. `npm run eval` scores all 20 tasks again with the same scorer.
 
 ## License
 
