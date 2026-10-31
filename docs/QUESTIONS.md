@@ -16,9 +16,9 @@
 12. How many invoices were issued at FitForge Lac during March 2026 (Africa/Tunis), excluding void invoices? Use the invoice timestamp. Answer with a number.
 13. What is the status of the FitForge Ariana gym? Answer with the status.
 14. What is Amira Ben Ali's net amount collected at FitForge Lac during March 2026 (Africa/Tunis), in TND? Payments minus refunds, by each record's timestamp. Answer with a number.
-15. How many current members does FitForge Sfax have? Current means status active and no deletion timestamp. Answer with a number.
+15. How many seats are still free in Boxe at FitForge Lac on 15 March 2026 (Africa/Tunis)? Free means capacity minus non-cancelled bookings. Answer with a number.
 16. What is the net amount collected at FitForge Sousse during April 2026, Africa/Tunis time, in TND? Net means payments minus refunds, using each record's own timestamp. Answer with a number.
 17. How many classes at FitForge Sfax start on 2 April 2026 (Africa/Tunis) and are not cancelled? Answer with a number.
-18. What is the membership status of Youssef Hammami at FitForge Lac? Answer with the status.
+18. Omar Cherif has more than one payment at FitForge Lac. What payment method was used for the one that falls in March 2026, Africa/Tunis? Answer with the method.
 19. Which members have a non-cancelled booking for Zumba at FitForge Sfax on 2 April 2026 (Africa/Tunis)? Answer with full names, comma-separated, alphabetical.
 20. What is Sarra Jebali's net amount collected at FitForge Sousse during April 2026 (Africa/Tunis), in TND? Payments minus refunds, by each record's timestamp. Answer with a number.

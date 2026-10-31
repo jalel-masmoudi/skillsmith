@@ -11,6 +11,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import type { TaskScore } from "../evals/score.ts";
+import { findLeaks } from "./leaks.ts";
 import {
   client,
   die,
@@ -79,7 +80,7 @@ You are improving your own notes. Below are your current instruction files, then
 Rewrite your files so that next time you avoid that kind of miss and use fewer tool calls when you can.
 
 Rules:
-- Write general notes about how the tools behave. Never paste a question, a task id, or an answer.
+- Write general notes about how the tools behave. Never paste a question, a task id, an answer, or a name or id from the data.
 - Keep what works. Change only what the failures show is wrong or missing. Keep the Output section of instructions.md exactly as it is: the scorer depends on it.
 - Short beats long.
 - You may edit agent/instructions.md and any agent/skills/<name>/SKILL.md (keep the frontmatter). Leave out files you don't change.
@@ -112,7 +113,12 @@ const { data: session } = await tf.sessions.create({
         spec: {
           model: agent.model,
           instructions: "You coach an agent that answers questions about FitForge. You rewrite its instruction files from its failed runs.",
-          config: { askUserQuestions: { enabled: false }, generativeUi: { enabled: false } },
+          config: {
+            askUserQuestions: { enabled: false },
+            generativeUi: { enabled: false },
+            dynamicSubAgents: { enabled: false },
+            webSearch: { enabled: false },
+          },
         },
       }
     : { name: agent.name },
@@ -135,12 +141,11 @@ for (const f of files) {
   if (!allowed.test(f.path)) die(`The agent tried to write ${f.path}. Only agent/instructions.md and agent/skills/<name>/SKILL.md are allowed.`);
 }
 
-// Overfitting guard: the new notes must not quote the questions or a long answer string.
+// Overfitting guard: no task text, no fixture name or id, no answer of 3+ characters as its own token.
 const leaks: string[] = [];
-for (const t of loadTasks()) {
-  const quotes = [t.id, t.question];
-  if (typeof t.answer === "string" && t.answer.length >= 12) quotes.push(t.answer);
-  for (const f of files) for (const q of quotes) if (f.text.includes(q)) leaks.push(`${f.path} quotes "${q.slice(0, 80)}"`);
+const taskList = loadTasks();
+for (const f of files) {
+  for (const hit of findLeaks(f.text, taskList)) leaks.push(`${f.path} quotes "${hit.slice(0, 80)}"`);
 }
 if (leaks.length && !flag("allow-leaks")) die(`The change quotes the eval tasks, so it would overfit:\n  ${leaks.join("\n  ")}\nRun improve again (or pass --allow-leaks to keep it anyway).`);
 

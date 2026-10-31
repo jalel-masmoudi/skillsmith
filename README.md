@@ -15,7 +15,7 @@ The skill at `agent/skills/fitforge-notes/SKILL.md` is an empty seed. Nothing in
 
 > Fill this in after the first measured runs. Five lines max. Keep the heading: the challenge checks for it.
 
-- **Task and score:** 20 FitForge questions (14 train, 6 holdout). Wrong answer scores 0. A right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. Run score = `100 × mean`.
+- **Task and score:** 20 FitForge questions (14 train, 6 holdout). Wrong, or a right answer with zero tool calls when the reference uses tools, scores 0. Otherwise a right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. Run score = `100 × mean`.
 - **Run 1 → run N:** not run yet. This change has no model key.
 - **The change that did it:** none yet.
 - **What the agent learned:** nothing yet. The skill file is still empty.
@@ -112,19 +112,19 @@ Question text is in [docs/QUESTIONS.md](docs/QUESTIONS.md). How the server runs,
 
 **`npm run improve`**
 
-Shows the failed training questions (never the holdout), whether the answer matched, and the call counts. It does not show the stored answer. The agent may change only `agent/instructions.md` and `agent/skills/<name>/SKILL.md`. The new text must not quote a task id, a question, or a long answer string. The commit trailer is `Agent-Session: <session_id>`.
+Shows the failed training questions (never the holdout), whether the answer matched, and the call counts. It does not show the stored answer. The agent may change only `agent/instructions.md` and `agent/skills/<name>/SKILL.md`. The new text must not quote a task id, a question, a fixture name or id, or an answer of 3 or more characters. The commit trailer is `Agent-Session: <session_id>`.
 
 **`npm run score -- --selftest`** checks perfect, wrong, unparseable, and wasteful replies. **`npm run score -- runs/run-NN`** re-scores a saved run.
 
 ## Scorer
 
-Per question: 0 if the answer is missing or wrong. If it is right, `0.8 + 0.2 × min(1, best_calls / actual_calls)`. Text must match after trim, casefold, and collapsed whitespace. Numbers match within ±0.01. The run score is `100 ×` the mean. A question passes when it is correct and the call ratio is 1.
+Per question: 0 if the answer is missing, wrong, or right with zero tool calls when `best_calls` is above 0. Otherwise a right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. Text must match after trim, casefold, and collapsed whitespace. Numbers match within ±0.01. The run score is `100 ×` the mean. A question passes when it is correct and the call ratio is 1.
 
 `best_calls` is the number of tool calls in the reference sequence in `evals/ground-truth.ts`. That sequence is run against the tools; its result has to equal a separate query over the rows. Both are checked by `npm test`.
 
 ## Skills, MCP, sandbox
 
-`skill_mode` is `inline`: the skill text is pasted into the instructions, and no sandbox is required. The agent also gets the FitForge MCP server. That is two of the TrueForge pieces the challenge asks for (skills and MCP), on top of the SDK the starter already uses.
+`skill_mode` is `inline`: the skill text is pasted into the instructions, and no sandbox is required. The agent also gets the FitForge MCP server. That is two of the TrueForge pieces the challenge asks for (skills and MCP), on top of the SDK the starter already uses. The eval config turns dynamic subagents off and web search off. Web search is the SDK's web and fetch switch. Nothing else in the manifest adds a fetch tool.
 
 `git` mode registers real skills and turns the sandbox on. Local npx on Linux needs `bubblewrap`, `socat`, and `ripgrep`, then a TrueForge restart. See [docs/MCP.md](docs/MCP.md) for what was and was not run on this machine.
 

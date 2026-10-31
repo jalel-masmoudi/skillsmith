@@ -39,7 +39,16 @@ test("correct with extra calls keeps the 0.8 floor", () => {
 
 test("fewer calls than the reference still cap at 1", () => {
   assert.equal(scoreTask(task({ best_calls: 5 }), reply(10), 1).score, 1);
-  assert.equal(callRatio(5, 0), 1);
+  assert.equal(callRatio(5, 1), 1);
+});
+
+test("a correct answer with zero calls scores 0 when tools are required", () => {
+  assert.equal(callRatio(2, 0), 0);
+  assert.equal(callRatio(0, 0), 1);
+  const s = scoreTask(task({ answer_type: "text", answer: "closed", best_calls: 2 }), reply("closed"), 0);
+  assert.equal(s.correct, true);
+  assert.equal(s.score, 0);
+  assert.equal(s.passed, false);
 });
 
 test("numeric tolerance is ±0.01 inclusive", () => {

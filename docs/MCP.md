@@ -10,10 +10,10 @@ HTTP (what TrueForge can attach):
 
 ```bash
 npm run mcp
-# FitForge MCP http://0.0.0.0:8787/mcp
+# FitForge MCP http://127.0.0.1:8787/mcp
 ```
 
-`GYM_MCP_PORT` wins, then `PORT`, then 8787. Bind address is `GYM_MCP_HOST` or `0.0.0.0`. One endpoint, `POST /mcp`, stateless JSON-RPC. A notification gets `202`. `GET` and `DELETE` get `405`.
+`GYM_MCP_PORT` wins, then `PORT`, then 8787. Bind address is `GYM_MCP_HOST` or `127.0.0.1`. One endpoint, `POST /mcp`, stateless JSON-RPC. A body over 1MB gets `413`. A notification gets `202`. `GET` and `DELETE` get `405`.
 
 Stdio (Content-Length frames, for a local client):
 
@@ -25,7 +25,7 @@ Nothing is written to stdout except frames.
 
 ## TrueForge
 
-TrueForge attaches **remote HTTP** MCP servers. It does not launch this process. Register the URL under Settings → Connectors, or let `npm run setup` / `npm run run-evals` call `settings.mcpServers.createOrUpdate` for the name `fitforge`. The agent manifest lists that name with every tool preloaded and with no approval gate, so an unattended eval does not stop on a tool call.
+TrueForge attaches **remote HTTP** MCP servers. It does not launch this process. Register the URL under Settings → Connectors, or let `npm run setup` / `npm run run-evals` call `settings.mcpServers.createOrUpdate` for the name `fitforge`. The agent manifest lists that name with every tool preloaded and with no approval gate, so an unattended eval does not stop on a tool call. Dynamic subagents are off, so tool calls stay on the eval turn. Web search is off. In the SDK that switch is also the built-in fetch tool (`WebSearchConfig`: "web search and fetch tools"). The manifest does not add another fetch tool. The repo is public, so a fetch tool could read it.
 
 ```bash
 # terminal 1

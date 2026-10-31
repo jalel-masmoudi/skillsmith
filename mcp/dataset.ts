@@ -168,6 +168,7 @@ export const dataset: Dataset = {
     { id: "inv_11", member_id: "mem_22", gym_id: "gym_sousse", issued_at: "2026-03-31T23:20:00.000Z", amount_millimes: 100000, status: "paid", description: "membership" },
     { id: "inv_12", member_id: "mem_23", gym_id: "gym_sousse", issued_at: "2026-04-15T09:00:00.000Z", amount_millimes: 50000, status: "paid", description: "membership" },
     { id: "inv_13", member_id: "mem_25", gym_id: "gym_sousse", issued_at: "2026-04-30T22:00:00.000Z", amount_millimes: 40000, status: "paid", description: "membership" },
+    { id: "inv_14", member_id: "mem_08", gym_id: "gym_lac", issued_at: "2026-02-10T09:00:00.000Z", amount_millimes: 20000, status: "paid", description: "drop-in" },
   ],
   payments: [
     { id: "pay_01", invoice_id: "inv_01", member_id: "mem_01", gym_id: "gym_lac", paid_at: "2026-03-02T08:05:00.000Z", amount_millimes: 120000, method: "card" },
@@ -181,6 +182,7 @@ export const dataset: Dataset = {
     { id: "pay_09", invoice_id: "inv_11", member_id: "mem_22", gym_id: "gym_sousse", paid_at: "2026-03-31T23:30:00.000Z", amount_millimes: 100000, method: "card" },
     { id: "pay_10", invoice_id: "inv_12", member_id: "mem_23", gym_id: "gym_sousse", paid_at: "2026-04-15T10:00:00.000Z", amount_millimes: 50000, method: "cash" },
     { id: "pay_11", invoice_id: "inv_13", member_id: "mem_25", gym_id: "gym_sousse", paid_at: "2026-04-30T22:30:00.000Z", amount_millimes: 40000, method: "card" },
+    { id: "pay_12", invoice_id: "inv_14", member_id: "mem_08", gym_id: "gym_lac", paid_at: "2026-02-10T10:00:00.000Z", amount_millimes: 20000, method: "card" },
   ],
   refunds: [
     { id: "ref_01", payment_id: "pay_01", member_id: "mem_01", gym_id: "gym_lac", refunded_at: "2026-03-05T10:00:00.000Z", amount_millimes: 15000 },

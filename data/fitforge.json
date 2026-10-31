@@ -618,6 +618,15 @@
       "amount_millimes": 40000,
       "status": "paid",
       "description": "membership"
+    },
+    {
+      "id": "inv_14",
+      "member_id": "mem_08",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-02-10T09:00:00.000Z",
+      "amount_millimes": 20000,
+      "status": "paid",
+      "description": "drop-in"
     }
   ],
   "payments": [
@@ -718,6 +727,15 @@
       "gym_id": "gym_sousse",
       "paid_at": "2026-04-30T22:30:00.000Z",
       "amount_millimes": 40000,
+      "method": "card"
+    },
+    {
+      "id": "pay_12",
+      "invoice_id": "inv_14",
+      "member_id": "mem_08",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-02-10T10:00:00.000Z",
+      "amount_millimes": 20000,
       "method": "card"
     }
   ],

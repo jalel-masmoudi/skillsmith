@@ -1,0 +1,9 @@
+{
+  "id": "18-omar-march-method",
+  "title": "Omar March payment method",
+  "holdout": true,
+  "question": "Omar Cherif has more than one payment at FitForge Lac. What payment method was used for the one that falls in March 2026, Africa/Tunis? Answer with the method.",
+  "answer_type": "text",
+  "answer": "cash",
+  "best_calls": 2
+}

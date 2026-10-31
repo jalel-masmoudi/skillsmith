@@ -30,10 +30,10 @@ test("split is 14 train and 6 holdout", () => {
   assert.deepEqual(
     tasks.filter((t) => t.holdout).map((t) => t.id),
     [
-      "15-sfax-current-members",
+      "15-boxe-free-seats",
       "16-sousse-april-net",
       "17-sfax-classes-2-apr",
-      "18-youssef-lac-status",
+      "18-omar-march-method",
       "19-zumba-booked-names",
       "20-sarra-april-net",
     ],
@@ -56,16 +56,22 @@ test("known answers from the fixture", () => {
   assert.equal(byId.get("12-lac-march-invoices"), 7);
   assert.equal(byId.get("13-ariana-status"), "closed");
   assert.equal(byId.get("14-amira-march-net"), 105);
-  assert.equal(byId.get("15-sfax-current-members"), 5);
+  assert.equal(byId.get("15-boxe-free-seats"), 16);
   assert.equal(byId.get("16-sousse-april-net"), 180);
   assert.equal(byId.get("17-sfax-classes-2-apr"), 2);
-  assert.equal(byId.get("18-youssef-lac-status"), "active");
+  assert.equal(byId.get("18-omar-march-method"), "cash");
   assert.equal(byId.get("19-zumba-booked-names"), "Ahmed Ben Youssef, Bilel Trabelsi, Hayet Khemiri, Nadia Jmal, Youssef Hammami");
   assert.equal(byId.get("20-sarra-april-net"), 90);
 });
 
 test("every reference plan makes at least one call", () => {
   for (const t of buildTasks()) assert.ok(t.best_calls >= 1, t.id);
+});
+
+test("name lookups that omit status or the start time stay at 3 calls", () => {
+  const calls = new Map(buildTasks().map((t) => [t.id, t.best_calls]));
+  assert.equal(calls.get("03-yoga-bookings"), 3);
+  assert.equal(calls.get("07-youssef-sfax-status"), 3);
 });
 
 test("Tunis offset puts 23:30Z on the next local calendar day", () => {

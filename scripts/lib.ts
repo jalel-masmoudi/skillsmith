@@ -122,6 +122,8 @@ export function buildManifest(gitRef?: string): TrueForgeApi.AgentSpec {
   const config: TrueForgeApi.RuntimeConfig = {
     askUserQuestions: { enabled: false }, // evals run unattended: never pause for a question
     generativeUi: { enabled: false }, // we want plain text + JSON back
+    dynamicSubAgents: { enabled: false }, // one thread per turn, so call counts stay on that turn
+    webSearch: { enabled: false }, // no web or fetch tool; the repo is public
   };
   const mcpServers: TrueForgeApi.McpServer[] = [
     { name: "fitforge", enableTools: ["@all"], preload: true, requireApprovalForTools: [] },
@@ -284,18 +286,34 @@ export async function exportSession(tf: TrueForge, sessionId: string) {
 
 export type SessionExport = Awaited<ReturnType<typeof exportSession>>;
 
-/** Tokens and tool calls for a whole session, from its export. */
 const GYM_TOOLS = new Set(TOOL_NAMES);
 
+/** True when `name` is a FitForge tool, including a server prefix such as `fitforge__list_gyms`. */
+export function isGymToolName(name: string | undefined): boolean {
+  if (!name) return false;
+  for (const tool of GYM_TOOLS) {
+    if (name === tool || name.endsWith(`__${tool}`)) return true;
+  }
+  return false;
+}
+
+interface CountedCall {
+  function?: { name?: string };
+  toolInfo?: { type?: string; name?: string };
+  tool_info?: { type?: string; name?: string };
+}
+
 /** MCP tool calls on one turn's events. System tools are not counted. */
-export function countMcpToolCalls(events: readonly { type: string }[]): number {
+export function countMcpToolCalls(events: readonly object[]): number {
   let n = 0;
   for (const e of events) {
-    if (e.type !== "model.message") continue;
-    const calls = (e as { toolCalls?: { function?: { name?: string }; toolInfo?: { type?: string } }[] }).toolCalls;
+    const rec = e as { type?: string; toolCalls?: CountedCall[]; tool_calls?: CountedCall[] };
+    if (rec.type !== "model.message") continue;
+    const calls = rec.toolCalls ?? rec.tool_calls;
     if (!calls) continue;
     for (const c of calls) {
-      if (c.toolInfo?.type === "mcp" || (c.function?.name != null && GYM_TOOLS.has(c.function.name))) n++;
+      const info = c.toolInfo ?? c.tool_info;
+      if (isGymToolName(c.function?.name) || isGymToolName(info?.name)) n++;
     }
   }
   return n;
@@ -303,9 +321,11 @@ export function countMcpToolCalls(events: readonly { type: string }[]): number {
 
 export function mcpCallsForTurn(exp: SessionExport, turnId: string): number {
   const turn = exp.turns.find((t) => t.id === turnId);
-  return turn ? countMcpToolCalls(turn.events) : 0;
+  if (!turn) throw new Error(`session export has no turn ${turnId}`);
+  return countMcpToolCalls(turn.events);
 }
 
+/** Tokens and tool calls for a whole session, from its export. */
 export function sessionStats(exp: SessionExport): { tokens: number; toolCalls: number } {
   let tokens = 0;
   let toolCalls = 0;

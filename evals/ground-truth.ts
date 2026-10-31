@@ -342,16 +342,28 @@ const specs: Spec[] = [
     },
   },
   {
-    id: "15-sfax-current-members",
-    title: "Current members at Sfax",
+    id: "15-boxe-free-seats",
+    title: "Free seats in Boxe",
     holdout: true,
-    question: "How many current members does FitForge Sfax have? Current means status active and no deletion timestamp. Answer with a number.",
+    question: "How many seats are still free in Boxe at FitForge Lac on 15 March 2026 (Africa/Tunis)? Free means capacity minus non-cancelled bookings. Answer with a number.",
     answer_type: "number",
-    answer: () => dataset.members.filter((m) => m.gym_id === "gym_sfax" && current(m)).length,
+    answer: () => {
+      const cls = dataset.classes.find((x) => x.gym_id === "gym_lac" && x.name === "Boxe" && inInstantRange(x.starts_at, d15a, d15b));
+      if (!cls) throw new Error("missing class");
+      const taken = dataset.bookings.filter((b) => b.class_id === cls.id && b.status !== "cancelled").length;
+      return cls.capacity - taken;
+    },
     plan: (c) => {
-      const id = gymId(c, "FitForge Sfax");
-      const rows = allPages<Member>(c, "list_members", { gym_id: id, status: "active" });
-      return rows.filter((m) => m.deleted_at == null).length;
+      const gid = gymId(c, "FitForge Lac");
+      const rows = allPages<{ id: string; name: string; capacity: number; status: string }>(c, "list_classes", {
+        gym_id: gid,
+        from: new Date(d15a).toISOString(),
+        to: new Date(d15b).toISOString(),
+      });
+      const cls = rows.find((x) => x.name === "Boxe" && x.status !== "cancelled");
+      if (!cls) throw new Error("missing class");
+      const taken = allPages<{ id: string }>(c, "list_bookings", { class_id: cls.id, status: "booked" });
+      return cls.capacity - taken.length;
     },
   },
   {
@@ -384,20 +396,22 @@ const specs: Spec[] = [
     },
   },
   {
-    id: "18-youssef-lac-status",
-    title: "Youssef Hammami at Lac",
+    id: "18-omar-march-method",
+    title: "Omar March payment method",
     holdout: true,
-    question: "What is the membership status of Youssef Hammami at FitForge Lac? Answer with the status.",
+    question: "Omar Cherif has more than one payment at FitForge Lac. What payment method was used for the one that falls in March 2026, Africa/Tunis? Answer with the method.",
     answer_type: "text",
     answer: () => {
-      const m = dataset.members.find((x) => x.full_name === "Youssef Hammami" && x.gym_id === "gym_lac");
-      if (!m) throw new Error("missing member");
-      return m.status;
+      const pays = dataset.payments.filter((p) => p.member_id === "mem_08" && p.gym_id === "gym_lac" && inInstantRange(p.paid_at, mar0, mar1));
+      if (pays.length !== 1) throw new Error(`expected one March payment, saw ${pays.length}`);
+      return pays[0].method;
     },
     plan: (c) => {
-      const gid = gymId(c, "FitForge Lac");
-      const hits = memberHits(c, "Youssef Hammami", gid);
-      return call<Member>(c, "get_member", { member_id: hits[0].id }).status;
+      const hits = memberHits(c, "Omar Cherif");
+      const pays = allPages<{ paid_at: string; method: string }>(c, "list_payments", { member_id: hits[0].id });
+      const march = pays.filter((p) => inInstantRange(p.paid_at, mar0, mar1));
+      if (march.length !== 1) throw new Error(`expected one March payment, saw ${march.length}`);
+      return march[0].method;
     },
   },
   {

@@ -5,10 +5,11 @@
 //   npm run score -- --selftest      check the scorer on perfect, empty and noisy answers
 //
 // Per question:
-//   wrong (or unparseable) → 0
-//   correct → 0.8 + 0.2 * min(1, best_calls / actual_calls)
+//   wrong, unparseable, or a correct answer with zero tool calls when best_calls > 0 → 0
+//   correct, with calls → 0.8 + 0.2 * min(1, best_calls / actual_calls)
 // Text is an exact match after normalization. Numbers match within ±0.01.
-// actual_calls of 0 makes the ratio 1, because best/0 is unbounded and the ratio is capped.
+// Zero calls when best_calls > 0 yields ratio 0, and the task scores 0 (a guess is not a solved question).
+// Zero calls when best_calls is 0 yields ratio 1.
 // Run score = 100 × the mean task score.
 // A task passes when the answer is correct and the call ratio is 1.
 
@@ -79,9 +80,9 @@ export function answersMatch(task: ScoredTask, got: unknown): boolean {
   return normalizeText(String(got)) === normalizeText(String(task.answer));
 }
 
-/** Ratio capped at 1. A non-positive actual call count yields 1 (best/0 is unbounded). */
+/** Ratio capped at 1. No calls when the reference uses calls yields 0. No calls when it uses none yields 1. */
 export function callRatio(best: number, actual: number): number {
-  if (!(actual > 0)) return 1;
+  if (!(actual > 0)) return best > 0 ? 0 : 1;
   return Math.min(1, best / actual);
 }
 
@@ -98,7 +99,9 @@ export function scoreTask(task: ScoredTask, reply: string, actualCalls = task.be
   }
   const correct = answersMatch(task, got);
   const ratio = callRatio(task.best_calls, actualCalls);
-  const score = correct ? 0.8 + 0.2 * ratio : 0;
+  // Ratio 0 from a guess (no calls, reference needs calls) does not keep the 0.8 floor.
+  const guessed = correct && !(actualCalls > 0) && task.best_calls > 0;
+  const score = correct && !guessed ? 0.8 + 0.2 * ratio : 0;
   return {
     ...base,
     score: round(score, 4),

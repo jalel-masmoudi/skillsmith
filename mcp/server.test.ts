@@ -52,6 +52,20 @@ test("search does not return the full record", () => {
   assert.deepEqual(Object.keys(found.matches[0]).sort(), ["full_name", "gym_id", "id"]);
 });
 
+test("a body over 1MB is rejected", async () => {
+  const srv = await startHttp(0);
+  try {
+    const res = await fetch(`http://127.0.0.1:${srv.port}/mcp`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: Buffer.alloc(1024 * 1024 + 1),
+    });
+    assert.equal(res.status, 413);
+  } finally {
+    await srv.close();
+  }
+});
+
 test("HTTP initialize, tools/list, and tools/call", async () => {
   const srv = await startHttp(0, "127.0.0.1");
   try {
