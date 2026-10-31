@@ -1,4 +1,14 @@
 // Rejects skill text that copies eval questions, fixture names, or answers.
+//
+// Names are matched after whitespace is collapsed. Ids are matched after that
+// plus case-folding and treating "-" like "_", so gym-lac and gym_lac are the
+// same id.
+//
+// Answers shorter than 3 characters (counts, yes/no) are leaks only within
+// SHORT_ANSWER_WINDOW characters of a blocked name. A bare digit elsewhere is
+// left alone. Clock answers (HH:MM) count only in that same window around a
+// class name, so "00:30" next to Sunrise is a leak and "00:30" in a timezone
+// note is not.
 
 import { dataset } from "../mcp/dataset.ts";
 
@@ -8,39 +18,134 @@ export interface LeakTask {
   answer: number | string;
 }
 
-function standalone(text: string, token: string): boolean {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?:^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, "iu").test(text);
+/** Characters of collapsed text between a blocked name and a short answer. */
+export const SHORT_ANSWER_WINDOW = 40;
+
+const SCHEMA_ENUMS = new Set(
+  [
+    ...dataset.gyms.map((g) => g.status),
+    ...dataset.members.map((m) => m.status),
+    ...dataset.classes.map((c) => c.status),
+    ...dataset.bookings.map((b) => b.status),
+    ...dataset.invoices.map((i) => i.status),
+    ...dataset.payments.map((p) => p.method),
+    "attended",
+    "no_show",
+  ].map((s) => s.toLowerCase()),
+);
+
+const GENERIC_CLASS_WORDS = new Set(["morning", "night", "flow", "cross", "training"]);
+
+interface Span {
+  start: number;
+  end: number;
+  label: string;
+  kind: "name" | "class";
 }
 
-function entityNames(): string[] {
-  const names: string[] = [];
-  for (const g of dataset.gyms) names.push(g.id, g.name, g.city);
-  for (const m of dataset.members) names.push(m.id, m.full_name);
-  for (const c of dataset.classes) names.push(c.id, c.name, c.instructor);
-  for (const b of dataset.bookings) names.push(b.id);
-  for (const i of dataset.invoices) names.push(i.id);
-  for (const p of dataset.payments) names.push(p.id);
-  for (const r of dataset.refunds) names.push(r.id);
-  return names;
+function escapeReg(token: string): string {
+  return token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function tokenSpans(haystack: string, token: string, flags: string): { start: number; end: number }[] {
+  const re = new RegExp(`(?:^|[^\\p{L}\\p{N}_])(${escapeReg(token)})(?=$|[^\\p{L}\\p{N}_])`, flags);
+  const out: { start: number; end: number }[] = [];
+  for (let m = re.exec(haystack); m; m = re.exec(haystack)) {
+    const start = m.index + m[0].length - m[1].length;
+    out.push({ start, end: start + m[1].length });
+    if (m.index === re.lastIndex) re.lastIndex += 1;
+  }
+  return out;
+}
+
+function near(spans: Span[], at: { start: number; end: number }, kind?: Span["kind"]): boolean {
+  return spans.some((s) => {
+    if (kind && s.kind !== kind) return false;
+    const gap = at.start >= s.end ? at.start - s.end : s.start >= at.end ? s.start - at.end : 0;
+    return gap <= SHORT_ANSWER_WINDOW;
+  });
+}
+
+function words(value: string): string[] {
+  return value.split(/\s+/).filter((w) => w.length >= 2 && !GENERIC_CLASS_WORDS.has(w.toLowerCase()));
 }
 
 /** Phrases and tokens the new skill must not contain. Empty when the text is clean. */
 export function findLeaks(text: string, tasks: LeakTask[]): string[] {
+  const collapsed = text.replace(/[\s\u00a0]+/g, " ").trim();
+  const folded = collapsed.replace(/-/g, "_").toLowerCase();
   const hits: string[] = [];
-  const lower = text.toLowerCase();
+  const spans: Span[] = [];
+
+  const add = (haystack: string, token: string, label: string, kind: Span["kind"], flags: string) => {
+    for (const span of tokenSpans(haystack, token, flags)) {
+      spans.push({ ...span, label, kind });
+      hits.push(label);
+    }
+  };
+
+  for (const g of dataset.gyms) {
+    add(folded, g.id, g.id, "name", "gu");
+    const short = g.name.replace(/^FitForge\s+/i, "");
+    if (short) add(collapsed, short, short, "name", "giu");
+  }
+  for (const id of [
+    ...dataset.members.map((m) => m.id),
+    ...dataset.classes.map((c) => c.id),
+    ...dataset.bookings.map((b) => b.id),
+    ...dataset.invoices.map((i) => i.id),
+    ...dataset.payments.map((p) => p.id),
+    ...dataset.refunds.map((r) => r.id),
+  ]) {
+    add(folded, id, id, "name", "gu");
+  }
+  for (const m of dataset.members) {
+    for (const w of words(m.full_name)) add(collapsed, w, w, "name", "giu");
+  }
+  for (const person of [...dataset.members.map((m) => m.full_name), ...dataset.classes.map((c) => c.instructor)]) {
+    if (collapsed.toLowerCase().includes(person.toLowerCase())) hits.push(person);
+  }
+  for (const c of dataset.classes) {
+    for (const w of words(c.instructor)) add(collapsed, w, w, "name", "giu");
+  }
+
+  const singleWord = new Set(dataset.classes.map((c) => c.name).filter((n) => !/\s/.test(n)));
+  for (const name of new Set(dataset.classes.map((c) => c.name))) {
+    const parts = name.split(/\s+/);
+    if (parts.length === 1) {
+      add(collapsed, parts[0], parts[0], "class", "gu");
+      continue;
+    }
+    if (collapsed.toLowerCase().includes(name.toLowerCase())) hits.push(name);
+    for (const w of parts) {
+      if (GENERIC_CLASS_WORDS.has(w.toLowerCase())) continue;
+      if (singleWord.has(w)) add(collapsed, w, w, "class", "gu");
+      else add(collapsed, w, w, "class", "giu");
+    }
+  }
+
   for (const t of tasks) {
-    if (lower.includes(t.id.toLowerCase())) hits.push(t.id);
-    if (t.question && lower.includes(t.question.toLowerCase())) hits.push(t.question);
-    const answer = String(t.answer);
-    if (answer.length >= 3 && standalone(text, answer)) hits.push(answer);
+    const id = t.id.toLowerCase().replace(/-/g, "_");
+    if (id && folded.includes(id)) hits.push(t.id);
+    const question = t.question.replace(/[\s\u00a0]+/g, " ").trim().toLowerCase();
+    if (question && folded.includes(question)) hits.push(t.question);
+
+    const answer = String(t.answer).trim();
+    if (!answer || SCHEMA_ENUMS.has(answer.toLowerCase())) continue;
+    if (/^\d{2}:\d{2}$/.test(answer)) {
+      if (tokenSpans(collapsed, answer, "gu").some((at) => near(spans, at, "class"))) hits.push(answer);
+      continue;
+    }
+    if (answer.length >= 3) {
+      if (tokenSpans(folded, answer.toLowerCase(), "gu").length) hits.push(answer);
+      if (typeof t.answer === "number" && Number.isFinite(t.answer)) {
+        const milli = String(Math.round(t.answer * 1000));
+        if (milli !== answer && tokenSpans(folded, milli, "gu").length) hits.push(milli);
+      }
+      continue;
+    }
+    if (tokenSpans(collapsed, answer, "giu").some((at) => near(spans, at))) hits.push(answer);
   }
-  for (const name of entityNames()) {
-    if (!name) continue;
-    // "Africa/Tunis" is the zone used in questions, not the city row by itself.
-    const hay = name.toLowerCase() === "tunis" ? text.replace(/africa\/tunis/gi, " ") : text;
-    const seen = /\s/.test(name) ? hay.toLowerCase().includes(name.toLowerCase()) : standalone(hay, name);
-    if (seen) hits.push(name);
-  }
+
   return [...new Set(hits)];
 }

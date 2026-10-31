@@ -141,7 +141,8 @@ for (const f of files) {
   if (!allowed.test(f.path)) die(`The agent tried to write ${f.path}. Only agent/instructions.md and agent/skills/<name>/SKILL.md are allowed.`);
 }
 
-// Overfitting guard: no task text, no fixture name or id, no answer of 3+ characters as its own token.
+// Overfitting guard: no task text, no fixture name or id. Schema words such as
+// "frozen" stay allowed. Short answers count only next to a name.
 const leaks: string[] = [];
 const taskList = loadTasks();
 for (const f of files) {

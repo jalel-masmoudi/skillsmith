@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { countMcpToolCalls, mcpCallsForTurn, type SessionExport } from "./lib.ts";
 
-// Parsed shape of a model.message tool call in @truefoundry/trueforge-sdk 0.182.0
-// (ModelMessageEvent.toolCalls / ToolCall.toolInfo / McpToolInfo). The installed
-// client is 0.180.0; those interfaces match 0.182.0. Wire JSON uses tool_calls
-// and tool_info; listTurnEvents returns the camelCase form below.
+// Verified by unpacking @truefoundry/trueforge-sdk 0.182.0 and reading
+// ModelMessageEvent, ToolCall, and McpToolInfo: camelCase toolCalls, toolInfo
+// { type: "mcp", name, serverId, serverName }. Those three interfaces are the
+// same in the 0.180.0 client installed here. Both versions' serializer Raw
+// form uses tool_calls and tool_info (server_name). No server was called.
 
 const captured = {
   type: "model.message",
@@ -31,6 +32,22 @@ const captured = {
 
 test("prefixed MCP tool names count and system tools do not", () => {
   assert.equal(countMcpToolCalls([captured]), 1);
+  assert.equal(
+    countMcpToolCalls([
+      {
+        type: "model.message",
+        toolCalls: [
+          {
+            id: "c2",
+            type: "function",
+            function: { name: "fitforge__list_gyms", arguments: "{}" },
+            toolInfo: { type: "mcp", name: "list_gyms", serverId: "other", serverName: "other" },
+          },
+        ],
+      },
+    ]),
+    0,
+  );
   assert.equal(
     countMcpToolCalls([
       {

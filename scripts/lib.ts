@@ -297,10 +297,17 @@ export function isGymToolName(name: string | undefined): boolean {
   return false;
 }
 
+interface CountedInfo {
+  type?: string;
+  name?: string;
+  serverName?: string;
+  server_name?: string;
+}
+
 interface CountedCall {
   function?: { name?: string };
-  toolInfo?: { type?: string; name?: string };
-  tool_info?: { type?: string; name?: string };
+  toolInfo?: CountedInfo;
+  tool_info?: CountedInfo;
 }
 
 /** MCP tool calls on one turn's events. System tools are not counted. */
@@ -313,7 +320,14 @@ export function countMcpToolCalls(events: readonly object[]): number {
     if (!calls) continue;
     for (const c of calls) {
       const info = c.toolInfo ?? c.tool_info;
-      if (isGymToolName(c.function?.name) || isGymToolName(info?.name)) n++;
+      const named = isGymToolName(c.function?.name) || isGymToolName(info?.name);
+      if (!named) continue;
+      if (!info) {
+        n++;
+        continue;
+      }
+      const server = info.serverName ?? info.server_name;
+      if (info.type === "mcp" && server === "fitforge") n++;
     }
   }
   return n;

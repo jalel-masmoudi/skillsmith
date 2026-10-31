@@ -112,7 +112,7 @@ Question text is in [docs/QUESTIONS.md](docs/QUESTIONS.md). How the server runs,
 
 **`npm run improve`**
 
-Shows the failed training questions (never the holdout), whether the answer matched, and the call counts. It does not show the stored answer. The agent may change only `agent/instructions.md` and `agent/skills/<name>/SKILL.md`. The new text must not quote a task id, a question, a fixture name or id, or an answer of 3 or more characters. The commit trailer is `Agent-Session: <session_id>`.
+Shows the failed training questions (never the holdout), whether the answer matched, and the call counts. It does not show the stored answer. The agent may change only `agent/instructions.md` and `agent/skills/<name>/SKILL.md`. The new text must not quote a task id, a question, or a fixture name or id. Short answers count only when they sit next to a name. Schema words such as frozen or closed stay allowed. The commit trailer is `Agent-Session: <session_id>`.
 
 **`npm run score -- --selftest`** checks perfect, wrong, unparseable, and wasteful replies. **`npm run score -- runs/run-NN`** re-scores a saved run.
 

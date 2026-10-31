@@ -56,7 +56,7 @@ test("known answers from the fixture", () => {
   assert.equal(byId.get("12-lac-march-invoices"), 7);
   assert.equal(byId.get("13-ariana-status"), "closed");
   assert.equal(byId.get("14-amira-march-net"), 105);
-  assert.equal(byId.get("15-boxe-free-seats"), 16);
+  assert.equal(byId.get("15-boxe-free-seats"), 14);
   assert.equal(byId.get("16-sousse-april-net"), 180);
   assert.equal(byId.get("17-sfax-classes-2-apr"), 2);
   assert.equal(byId.get("18-omar-march-method"), "cash");

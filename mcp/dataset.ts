@@ -153,6 +153,9 @@ export const dataset: Dataset = {
     { id: "bk_15", class_id: "cls_sfax_zumba", member_id: "mem_12", status: "booked", created_at: "2026-04-01T09:20:00.000Z" },
     { id: "bk_16", class_id: "cls_sfax_zumba", member_id: "mem_18", status: "cancelled", created_at: "2026-04-01T09:25:00.000Z" },
     { id: "bk_17", class_id: "cls_sfax_zumba", member_id: "mem_15", status: "cancelled", created_at: "2026-04-01T09:30:00.000Z" },
+    { id: "bk_18", class_id: "cls_boxe", member_id: "mem_01", status: "booked", created_at: "2026-03-01T12:00:00.000Z" },
+    { id: "bk_19", class_id: "cls_boxe", member_id: "mem_06", status: "booked", created_at: "2026-03-01T12:05:00.000Z" },
+    { id: "bk_20", class_id: "cls_boxe", member_id: "mem_03", status: "cancelled", created_at: "2026-03-01T12:10:00.000Z" },
   ],
   invoices: [
     { id: "inv_01", member_id: "mem_01", gym_id: "gym_lac", issued_at: "2026-03-02T08:00:00.000Z", amount_millimes: 120000, status: "paid", description: "membership" },
