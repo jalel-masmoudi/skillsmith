@@ -1,8 +1,9 @@
 // Rejects skill text that copies eval questions, fixture names, or answers.
 //
-// Names are matched after whitespace is collapsed. Ids are matched after that
-// plus case-folding and treating "-" like "_", so gym-lac and gym_lac are the
-// same id.
+// The text is NFKC-normalized, zero-width characters are removed, and look-alike
+// letters are mapped to Latin before matching. Names are matched after whitespace
+// is collapsed. Ids and quoted questions are matched after that plus case-folding
+// and treating "-" like "_", so gym-lac and gym_lac are the same id.
 //
 // Answers shorter than 3 characters (counts, yes/no) are leaks only within
 // SHORT_ANSWER_WINDOW characters of a blocked name. A bare digit elsewhere is
@@ -20,6 +21,39 @@ export interface LeakTask {
 
 /** Characters of collapsed text between a blocked name and a short answer. */
 export const SHORT_ANSWER_WINDOW = 40;
+
+const ZERO_WIDTH = /[\u200B-\u200D\uFEFF\u2060\u00AD]/g;
+
+/** Letters that look like Latin but are not. Applied after NFKD. */
+const LOOKALIKE: Record<string, string> = {
+  "\u0430": "a", "\u0410": "A",
+  "\u0435": "e", "\u0415": "E",
+  "\u043e": "o", "\u041e": "O",
+  "\u0440": "p", "\u0420": "P",
+  "\u0441": "c", "\u0421": "C",
+  "\u0443": "y", "\u0423": "Y",
+  "\u0445": "x", "\u0425": "X",
+  "\u0456": "i", "\u0406": "I",
+  "\u0455": "s", "\u0405": "S",
+  "\u03bf": "o", "\u039f": "O",
+};
+
+const NAME_PARTICLES = new Set(["ben", "el"]);
+const SENTENCE_START_OK = new Set(["core", "spin", "stretch"]);
+const ALWAYS_CLASS = new Set(["boxe", "zumba"]);
+
+/** NFKD, drop combining marks and zero-width characters, map look-alike letters. Case is kept. */
+export function normalizeForMatch(text: string): string {
+  const base = text.normalize("NFKD").replace(/\p{M}/gu, "").replace(ZERO_WIDTH, "");
+  let out = "";
+  for (const ch of base) out += LOOKALIKE[ch] ?? ch;
+  return out;
+}
+
+function sentenceStart(text: string, index: number): boolean {
+  const before = text.slice(0, index).trimEnd();
+  return before.length === 0 || /[.!?]$/.test(before);
+}
 
 const SCHEMA_ENUMS = new Set(
   [
@@ -67,18 +101,22 @@ function near(spans: Span[], at: { start: number; end: number }, kind?: Span["ki
 }
 
 function words(value: string): string[] {
-  return value.split(/\s+/).filter((w) => w.length >= 2 && !GENERIC_CLASS_WORDS.has(w.toLowerCase()));
+  return value.split(/\s+/).filter((w) => {
+    const l = w.toLowerCase();
+    return w.length >= 2 && !GENERIC_CLASS_WORDS.has(l) && !NAME_PARTICLES.has(l);
+  });
 }
 
 /** Phrases and tokens the new skill must not contain. Empty when the text is clean. */
 export function findLeaks(text: string, tasks: LeakTask[]): string[] {
-  const collapsed = text.replace(/[\s\u00a0]+/g, " ").trim();
+  const collapsed = normalizeForMatch(text).replace(/[\s\u00a0]+/g, " ").trim();
   const folded = collapsed.replace(/-/g, "_").toLowerCase();
   const hits: string[] = [];
   const spans: Span[] = [];
 
   const add = (haystack: string, token: string, label: string, kind: Span["kind"], flags: string) => {
     for (const span of tokenSpans(haystack, token, flags)) {
+      if (SENTENCE_START_OK.has(token.toLowerCase()) && sentenceStart(haystack, span.start)) continue;
       spans.push({ ...span, label, kind });
       hits.push(label);
     }
@@ -113,7 +151,8 @@ export function findLeaks(text: string, tasks: LeakTask[]): string[] {
   for (const name of new Set(dataset.classes.map((c) => c.name))) {
     const parts = name.split(/\s+/);
     if (parts.length === 1) {
-      add(collapsed, parts[0], parts[0], "class", "gu");
+      const flags = ALWAYS_CLASS.has(parts[0].toLowerCase()) ? "giu" : "gu";
+      add(collapsed, parts[0], parts[0], "class", flags);
       continue;
     }
     if (collapsed.toLowerCase().includes(name.toLowerCase())) hits.push(name);
@@ -127,7 +166,7 @@ export function findLeaks(text: string, tasks: LeakTask[]): string[] {
   for (const t of tasks) {
     const id = t.id.toLowerCase().replace(/-/g, "_");
     if (id && folded.includes(id)) hits.push(t.id);
-    const question = t.question.replace(/[\s\u00a0]+/g, " ").trim().toLowerCase();
+    const question = normalizeForMatch(t.question).replace(/[\s\u00a0]+/g, " ").trim().replace(/-/g, "_").toLowerCase();
     if (question && folded.includes(question)) hits.push(t.question);
 
     const answer = String(t.answer).trim();

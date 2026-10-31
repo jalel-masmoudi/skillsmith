@@ -30,6 +30,27 @@ test("blocks the memorized train note and id or unit disguises", () => {
   assert.ok(has("Sunrise starts at 00:30 local.", "00:30"));
 });
 
+test("disguised letters, dashed questions, boxe, and zumba are blocked", () => {
+  assert.ok(has("see L\u0430c", "Lac"));
+  assert.ok(has("see L\u200bac", "Lac"));
+  assert.ok(has("see \uFF2c\uFF41\uFF43", "Lac"));
+  assert.ok(has("see L\u00e1c", "Lac"));
+  assert.ok(has("see La\u0301c", "Lac"));
+  assert.ok(has("boxe tonight", "Boxe"));
+  assert.ok(has("zumba tonight", "Zumba"));
+  const quoted = findLeaks("What is the pre_tax total?", [
+    { id: "q-dash", question: "What is the pre-tax total?", answer: "unused" },
+  ]);
+  assert.ok(quoted.includes("What is the pre-tax total?"));
+});
+
+test("particles and sentence-start Core, Spin, and Stretch are allowed", () => {
+  for (const ok of ["Ben is a particle.", "El is a particle.", "Core idea. Spin the list. Stretch the page."]) {
+    assert.deepEqual(findLeaks(ok, tasks), [], ok);
+  }
+  assert.ok(has("The Core class is on the schedule.", "Core"));
+});
+
 test("schema words, Tunis, a bare clock time, and lowercase spin are allowed", () => {
   for (const ok of [
     "frozen or cancelled member is not current",

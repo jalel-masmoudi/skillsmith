@@ -1,6 +1,6 @@
 # Next change: accept a skill edit only when the train score rises
 
-This repo has the tasks, the scorer, and the FitForge tools. The skill file is still an empty seed. The starter's `npm run improve` can already ask the agent for a new `agent/skills/*/SKILL.md` and commit it. The next change replaces that one-shot rewrite with a small loop that keeps an edit only when the training score goes up.
+`npm run improve` reads training misses and extra-call tasks, asks a diagnosis session to use subagents, then has the agent rewrite the skill and commits that edit. It does not re-score before the commit. Run `npm run run-evals` afterward. Keeping an edit only when the train score rises is still a manual choice (`git reset --hard HEAD~1` drops it).
 
 ## Loop
 
