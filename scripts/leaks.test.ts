@@ -34,6 +34,8 @@ test("disguised letters, dashed questions, boxe, and zumba are blocked", () => {
   assert.ok(has("see L\u0430c", "Lac"));
   assert.ok(has("see L\u200bac", "Lac"));
   assert.ok(has("see \uFF2c\uFF41\uFF43", "Lac"));
+  assert.ok(has("see L\u00e1c", "Lac"));
+  assert.ok(has("see La\u0301c", "Lac"));
   assert.ok(has("boxe tonight", "Boxe"));
   assert.ok(has("zumba tonight", "Zumba"));
   const quoted = findLeaks("What is the pre_tax total?", [

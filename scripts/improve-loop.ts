@@ -44,7 +44,7 @@ export interface Forge {
 }
 
 const SKILL_PATH = "agent/skills/fitforge-notes/SKILL.md";
-const ALLOWED = /^agent\/(instructions\.md|skills\/[a-z0-9][a-z0-9-]*\/SKILL\.md)$/;
+const ALLOWED = /^agent\/skills\/[a-z0-9][a-z0-9-]*\/SKILL\.md$/;
 
 export function toolTrace(events: readonly object[] | undefined): string {
   const lines: string[] = [];
@@ -157,18 +157,25 @@ export function rewritePrompt(currentSkill: string, diagnosis: string): string {
 }
 
 export function holdoutHits(prompt: string, tasks: { id: string; holdout?: boolean; question: string; answer?: number | string }[]): string[] {
-  const folded = prompt.replace(/[\s\u00a0]+/g, " ").replace(/-/g, "_").toLowerCase();
-  const hits: string[] = [];
-  for (const t of tasks) {
-    if (!t.holdout) continue;
-    const id = t.id.toLowerCase().replace(/-/g, "_");
-    if (id && folded.includes(id)) hits.push(t.id);
-    const question = t.question.replace(/[\s\u00a0]+/g, " ").replace(/-/g, "_").toLowerCase();
-    if (question && folded.includes(question)) hits.push(t.id);
-    const answer = String(t.answer ?? "").trim();
-    if (answer.length >= 12 && folded.includes(answer.toLowerCase().replace(/-/g, "_"))) hits.push(t.id);
+  const holdouts = tasks.filter((t) => t.holdout).map((t) => ({ id: t.id, question: t.question, answer: t.answer ?? "" }));
+  const wanted = new Set<string>();
+  for (const t of holdouts) {
+    wanted.add(t.id);
+    wanted.add(t.question);
+    wanted.add(String(t.answer));
+    if (typeof t.answer === "number" && Number.isFinite(t.answer)) wanted.add(String(Math.round(t.answer * 1000)));
   }
-  return hits;
+  return findLeaks(prompt, holdouts).filter((hit) => wanted.has(hit));
+}
+
+/** First line only, capped, and never a trailer or a leak. */
+export function sanitizeLearned(raw: string, tasks: { id: string; question: string; answer?: number | string }[]): string {
+  const line = (raw.split(/\r?\n/).find((s) => s.trim()) ?? "").trim().slice(0, 200);
+  const banned = /co-authored|claude|cursor|copilot|antigravity/i;
+  if (!line || /^[\w-]+:\s/.test(line) || banned.test(line) || findLeaks(line, tasks.map((t) => ({ id: t.id, question: t.question, answer: t.answer ?? "" }))).length) {
+    return "(no summary given)";
+  }
+  return line;
 }
 
 export function parseAgentEdit(text: string): { files: { path: string; text: string }[]; learned: string } {
@@ -180,8 +187,18 @@ export function parseAgentEdit(text: string): { files: { path: string; text: str
   return { files, learned };
 }
 
-export function skillCommitMessage(nn: string, learned: string, sessionId: string): string {
-  return `agent: learn from run ${nn}\n\n${learned || "(no summary given)"}\n\nAgent-Session: ${sessionId}`;
+export function skillCommitMessage(nn: string, learned: string, sessionId: string, tasks: { id: string; question: string; answer?: number | string }[]): string {
+  return `agent: learn from run ${nn}\n\n${sanitizeLearned(learned, tasks)}\n\nAgent-Session: ${sessionId}`;
+}
+
+/** Stage `spec`, refuse if anything else is already staged, then commit only `spec`. */
+export function commitChecked(runGit: (...args: string[]) => string, message: string, spec: string[]): void {
+  runGit("add", "--", ...spec);
+  const staged = runGit("diff", "--cached", "--name-only").split(/\r?\n/).map((s) => s.trim().replaceAll("\\", "/")).filter(Boolean);
+  const ok = (name: string) => name.startsWith("agent/") || spec.includes(name);
+  const bad = staged.filter((name) => !ok(name));
+  if (bad.length) throw new Error(`refusing to commit ${bad.join(", ")}`);
+  runGit("commit", "-q", "-m", message, "--", ...spec);
 }
 
 export interface ImproveInput {
@@ -192,6 +209,7 @@ export interface ImproveInput {
   runLabel: string;
   forge: Forge;
   allowLeaks?: boolean;
+  onDiagnoseSession?: (sessionId: string) => Promise<void>;
   onRewriteSession?: (sessionId: string) => Promise<void>;
   commit?: (message: string) => void;
 }
@@ -202,14 +220,16 @@ export async function improveRun(opts: ImproveInput): Promise<{ rewriteSessionId
   if (!items.length) return { skipped: true };
 
   const dPrompt = diagnosisPrompt(opts.runLabel, items);
-  const hidden = holdoutHits(dPrompt, opts.tasks);
+  // Train traces contain small counts beside names. Those match holdout answers "2" and "14".
+  const hidden = holdoutHits(dPrompt, opts.tasks).filter((h) => !/^\d{1,2}$/.test(h));
   if (hidden.length) throw new Error(`diagnosis prompt includes holdout ${hidden.join(", ")}`);
 
   const diagnosis = await opts.forge.diagnose(dPrompt);
+  if (opts.onDiagnoseSession) await opts.onDiagnoseSession(diagnosis.sessionId);
   const skillPath = join(opts.root, SKILL_PATH);
   const current = readFileSync(skillPath, "utf8");
   const rPrompt = rewritePrompt(current, diagnosis.text);
-  const hiddenRewrite = holdoutHits(rPrompt, opts.tasks);
+  const hiddenRewrite = holdoutHits(rPrompt, opts.tasks).filter((h) => !/^\d{1,2}$/.test(h));
   if (hiddenRewrite.length) throw new Error(`rewrite prompt includes holdout ${hiddenRewrite.join(", ")}`);
 
   const rewrite = await opts.forge.rewrite(rPrompt);
@@ -224,13 +244,11 @@ export async function improveRun(opts: ImproveInput): Promise<{ rewriteSessionId
     for (const f of files) for (const hit of findLeaks(f.text, opts.tasks)) leaks.push(`${f.path} quotes "${hit.slice(0, 80)}"`);
     if (leaks.length) throw new Error(`leak guard:\n${leaks.join("\n")}`);
   }
-  for (const f of files.filter((f) => f.path.endsWith("/SKILL.md"))) {
+  for (const f of files) {
     if (!/^---\n[\s\S]*?\bname:[\s\S]*?\bdescription:[\s\S]*?\n---\n/.test(f.text) || f.text.split("\n").length < 6) {
       throw new Error(`${f.path} lost its frontmatter`);
     }
   }
-  const instructions = files.find((f) => f.path === "agent/instructions.md");
-  if (instructions && !instructions.text.includes('"answer"')) throw new Error("instructions dropped the answer format");
 
   for (const f of files) {
     const dest = join(opts.root, f.path);
@@ -238,7 +256,7 @@ export async function improveRun(opts: ImproveInput): Promise<{ rewriteSessionId
     writeFileSync(dest, f.text);
   }
   if (opts.onRewriteSession) await opts.onRewriteSession(rewrite.sessionId);
-  const message = skillCommitMessage(opts.runLabel, learned, rewrite.sessionId);
+  const message = skillCommitMessage(opts.runLabel, learned, rewrite.sessionId, opts.tasks);
   if (opts.commit) opts.commit(message);
   return { rewriteSessionId: rewrite.sessionId, message };
 }

@@ -24,7 +24,7 @@ export const SHORT_ANSWER_WINDOW = 40;
 
 const ZERO_WIDTH = /[\u200B-\u200D\uFEFF\u2060\u00AD]/g;
 
-/** Letters that look like Latin but are not. Applied after NFKC. */
+/** Letters that look like Latin but are not. Applied after NFKD. */
 const LOOKALIKE: Record<string, string> = {
   "\u0430": "a", "\u0410": "A",
   "\u0435": "e", "\u0415": "E",
@@ -42,10 +42,11 @@ const NAME_PARTICLES = new Set(["ben", "el"]);
 const SENTENCE_START_OK = new Set(["core", "spin", "stretch"]);
 const ALWAYS_CLASS = new Set(["boxe", "zumba"]);
 
-/** NFKC, drop zero-width characters, map look-alike letters. Case is kept. */
+/** NFKD, drop combining marks and zero-width characters, map look-alike letters. Case is kept. */
 export function normalizeForMatch(text: string): string {
+  const base = text.normalize("NFKD").replace(/\p{M}/gu, "").replace(ZERO_WIDTH, "");
   let out = "";
-  for (const ch of text.normalize("NFKC").replace(ZERO_WIDTH, "")) out += LOOKALIKE[ch] ?? ch;
+  for (const ch of base) out += LOOKALIKE[ch] ?? ch;
   return out;
 }
 

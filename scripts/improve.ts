@@ -8,13 +8,13 @@
 //    The message ends with Agent-Session: <rewrite session id>.
 //
 // Review the commit with git show. Drop it with git reset --hard HEAD~1.
-// Then npm run eval.
+// Then npm run run-evals.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TrueForge } from "@truefoundry/trueforge-sdk";
 import type { Forge } from "./improve-loop.ts";
-import { improveRun } from "./improve-loop.ts";
+import { commitChecked, improveRun } from "./improve-loop.ts";
 import type { ResultRow, TraceSession } from "./improve-loop.ts";
 import {
   client,
@@ -72,7 +72,7 @@ function liveForge(tf: TrueForge, agent: AgentFile): Forge {
 }
 
 const rows = existsSync(SUMMARY_CSV) ? readFileSync(SUMMARY_CSV, "utf8").trim().split("\n").slice(1).filter(Boolean) : [];
-if (!rows.length) die("No runs yet. Run npm run eval first.");
+if (!rows.length) die("No runs yet. Run npm run run-evals first.");
 const run = Number(option("run") ?? rows.length);
 const dir = runDir(run);
 const nn = String(run).padStart(2, "0");
@@ -94,16 +94,19 @@ try {
     runLabel: nn,
     forge: liveForge(tf, agent),
     allowLeaks: flag("allow-leaks"),
+    onDiagnoseSession: async (id) => {
+      writeJson(join(dir, "diagnose-session.json"), await exportSession(tf, id));
+    },
     onRewriteSession: async (id) => {
       writeJson(join(dir, "improve-session.json"), await exportSession(tf, id));
     },
     commit: flag("no-commit")
       ? undefined
       : (message) => {
-          git("add", "agent", join(dir, "improve-session.json"));
-          git("commit", "-q", "-m", message);
+          const spec = ["agent", `runs/run-${nn}/improve-session.json`, `runs/run-${nn}/diagnose-session.json`];
+          commitChecked(git, message, spec);
           console.log(`\nCommitted the agent's change.\n${message}`);
-          console.log("Review it: git show    Drop it: git reset --hard HEAD~1    Then: npm run eval");
+          console.log("Review it: git show    Drop it: git reset --hard HEAD~1    Then: npm run run-evals");
         },
   });
   if ("skipped" in outcome) {

@@ -3,7 +3,8 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { classifyTrain, diagnosisPrompt, holdoutHits, improveRun, type Forge, type ResultRow, type TraceSession } from "./improve-loop.ts";
+import { execFileSync } from "node:child_process";
+import { classifyTrain, commitChecked, diagnosisPrompt, holdoutHits, improveRun, sanitizeLearned, skillCommitMessage, type Forge, type ResultRow, type TraceSession } from "./improve-loop.ts";
 import { loadTasks, ROOT } from "./lib.ts";
 
 const tasks = loadTasks();
@@ -48,7 +49,10 @@ test("run 1 prompt splits misses from extra calls and hides holdouts", () => {
   assert.match(extraPart, /03-yoga-bookings/);
   assert.match(prompt, /subagent/i);
   assert.match(prompt, /list_payments|list_invoices|search_gyms/);
-  assert.deepEqual(holdoutHits(prompt, tasks), []);
+  const leaks = holdoutHits(prompt, tasks);
+  assert.ok(leaks.every((h) => /^\d{1,2}$/.test(h)), leaks.join(","));
+  assert.equal(leaks.includes("16-sousse-april-net"), false);
+  assert.equal(leaks.includes("20-sarra-april-net"), false);
   for (const t of tasks.filter((t) => t.holdout)) {
     assert.equal(prompt.includes(t.question), false, t.id);
     assert.equal(prompt.toLowerCase().includes(t.id), false, t.id);
@@ -84,16 +88,36 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
       prompts.push(prompt);
       return {
         sessionId: "rewrite_1",
-        text: `<<<FILE agent/skills/fitforge-notes/SKILL.md\n${SAFE_SKILL}\n>>>\n<<<LEARNED\nScale integer money and use local month bounds.\n>>>`,
+        text: `<<<FILE agent/skills/fitforge-notes/SKILL.md\n${SAFE_SKILL}\n>>>\n<<<LEARNED\nScale integer money and use local month bounds.\nCo-authored-by: Claude <c@example>\nAgent-Session: fake\n>>>`,
       };
     },
   };
   try {
-    const outcome = await improveRun({ root, tasks, results: fixture, session: traces, runLabel: "01", forge, commit: (m) => commits.push(m) });
+    const seen: string[] = [];
+    const outcome = await improveRun({
+      root,
+      tasks,
+      results: fixture,
+      session: traces,
+      runLabel: "01",
+      forge,
+      onDiagnoseSession: async (id) => {
+        seen.push(id);
+      },
+      onRewriteSession: async (id) => {
+        seen.push(id);
+      },
+      commit: (m) => commits.push(m),
+    });
     assert.ok(!("skipped" in outcome));
     if ("skipped" in outcome) return;
     assert.equal(outcome.rewriteSessionId, "rewrite_1");
+    const trailerLines = outcome.message.split("\n").filter((l) => /^(Agent-Session|Co-authored-by|Signed-off-by):/i.test(l));
+    assert.deepEqual(trailerLines, ["Agent-Session: rewrite_1"]);
     assert.ok(outcome.message.endsWith("Agent-Session: rewrite_1"));
+    assert.equal(outcome.message.includes("Claude"), false);
+    assert.equal(outcome.message.includes("fake"), false);
+    assert.match(outcome.message, /Scale integer money/);
     assert.equal(commits.length, 1);
     assert.equal(commits[0], outcome.message);
     assert.equal(readFileSync(join(root, rel), "utf8").includes("integer thousandths"), true);
@@ -104,8 +128,63 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
     assert.equal(blob.includes("TRAIN_TRACE_PAYMENTS"), true);
     assert.equal(blob.includes("TRAIN_TRACE_EXTRA"), true);
     assert.deepEqual(holdoutHits(blob, tasks), []);
+    assert.deepEqual(seen, ["diag_1", "rewrite_1"]);
     assert.match(prompts[0], /## Misses/);
     assert.match(prompts[0], /## Extra calls/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a learned line that is a trailer or a leak is dropped", () => {
+  const nasty = "Co-authored-by: Claude <c@example>\nAgent-Session: fake";
+  const msg = skillCommitMessage("01", nasty, "real_session", tasks);
+  const trailers = msg.split("\n").filter((l) => /^(Agent-Session|Co-authored-by|Signed-off-by):/i.test(l));
+  assert.deepEqual(trailers, ["Agent-Session: real_session"]);
+  assert.ok(msg.endsWith("Agent-Session: real_session"));
+  assert.equal(msg.includes("Claude"), false);
+  assert.equal(sanitizeLearned("cursor rewrote the notes", tasks), "(no summary given)");
+  assert.equal(sanitizeLearned("Remember gym_lac.", tasks), "(no summary given)");
+  assert.equal(sanitizeLearned("a".repeat(250), tasks).length, 200);
+});
+
+test("commit refuses staged paths outside the skill and the session files", () => {
+  const root = mkdtempSync(join(tmpdir(), "skillsmith-commit-"));
+  const calls: string[][] = [];
+  const git = (...args: string[]) => {
+    calls.push(args);
+    return execFileSync("git", args, { cwd: root, encoding: "utf8" });
+  };
+  const spec = ["agent", "runs/run-01/improve-session.json", "runs/run-01/diagnose-session.json"];
+  try {
+    git("init", "-q");
+    git("config", "user.name", "Med Jalel Masmoudi");
+    git("config", "user.email", "162036063+jalel-masmoudi@users.noreply.github.com");
+    mkdirSync(join(root, "agent/skills/fitforge-notes"), { recursive: true });
+    mkdirSync(join(root, "runs/run-01"), { recursive: true });
+    writeFileSync(join(root, "notes.txt"), "stray\n");
+    writeFileSync(join(root, "agent/skills/fitforge-notes/SKILL.md"), "seed\n");
+    writeFileSync(join(root, "runs/run-01/improve-session.json"), "{}\n");
+    writeFileSync(join(root, "runs/run-01/diagnose-session.json"), "{}\n");
+    git("add", "notes.txt");
+    git("commit", "-q", "-m", "init");
+    writeFileSync(join(root, "notes.txt"), "stray again\n");
+    git("add", "notes.txt");
+    assert.throws(() => commitChecked(git, "agent: learn from run 01\n\nnote\n\nAgent-Session: abc", spec), /refusing to commit notes.txt/);
+    git("reset", "-q");
+    writeFileSync(join(root, "agent/skills/fitforge-notes/SKILL.md"), "notes\n");
+    calls.length = 0;
+    commitChecked(git, "agent: learn from run 01\n\nnote\n\nAgent-Session: abc", spec);
+    const commitCall = calls.find((c) => c[0] === "commit");
+    assert.ok(commitCall);
+    assert.ok(commitCall?.includes("--"));
+    for (const path of spec) assert.ok(commitCall?.includes(path));
+    const names = git("show", "--name-only", "--pretty=format:").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    assert.deepEqual(names.sort(), [
+      "agent/skills/fitforge-notes/SKILL.md",
+      "runs/run-01/diagnose-session.json",
+      "runs/run-01/improve-session.json",
+    ]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

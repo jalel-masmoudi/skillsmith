@@ -91,12 +91,10 @@ Add a model under Settings → Models and set `TF_MODEL` if you are not using `a
 **5. Run the evals, then let the agent edit its skill**
 
 ```bash
-npm run eval
+npm run run-evals
 npm run improve
-npm run eval
+npm run run-evals
 ```
-
-`npm run eval` is the same command as `npm run run-evals`.
 
 After run 1, do not change `evals/` again. Same tasks, same scorer, every run.
 
@@ -140,36 +138,7 @@ Not verified here: a live model call. `npm run improve` is checked against the s
 
 ## How the agent improves itself
 
-On Windows, use two terminals in this repo.
-
-Gym server, leave it running. It listens on port 8787:
-
-```bat
-npm run mcp
-```
-
-TrueForge, with this machine allowed to call that port:
-
-```bat
-scripts\trueforge.cmd
-```
-
-That file sets `OUTBOUND_URL_ALLOWED_HOSTS` to `["127.0.0.1","localhost"]` and starts TrueForge. After a model is configured:
-
-```bat
-npm run setup
-npm run eval
-npm run improve
-git show
-npm run eval
-```
-
-`npm run improve` reads the latest `runs/run-NN`. It keeps two training groups and drops holdouts 15–20 (their questions, answers, and traces):
-
-1. **Misses.** The answer did not match. On run 1 those are tasks 02 and 12.
-2. **Extra calls.** The answer matched, and the run used more calls than a short solution.
-
-A diagnosis session has subagents turned on and is told to spawn one subagent per task. The agent then rewrites `agent/skills/fitforge-notes/SKILL.md`. The leak guard rejects the edit if it copies questions, names, or ids. A clean edit is committed. The message ends with `Agent-Session:` and the rewrite session id. `git show` reviews it. `git reset --hard HEAD~1` drops it. `npm run eval` scores all 20 tasks again with the same scorer.
+`npm run run-evals` scores all 20 tasks. `npm run improve` reads that run. Misses are training answers that did not match (run 1: tasks 02 and 12). Extra calls are training answers that matched but used more calls than a short solution. Holdouts 15–20 are omitted. A diagnosis session uses subagents, then the agent rewrites its skill. The leak guard checks the edit. A clean edit is committed with `Agent-Session:` and the rewrite session id, including `runs/run-NN/diagnose-session.json`. Review with `git show`. Drop with `git reset --hard HEAD~1`. Then `npm run run-evals` again.
 
 ## License
 

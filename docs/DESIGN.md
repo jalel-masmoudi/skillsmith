@@ -1,6 +1,6 @@
 # Next change: accept a skill edit only when the train score rises
 
-`npm run improve` reads training misses and extra-call tasks, asks a diagnosis session to use subagents, then has the agent rewrite the skill and commits that edit. It does not re-score before the commit. Run `npm run eval` afterward. Keeping an edit only when the train score rises is still a manual choice (`git reset --hard HEAD~1` drops it).
+`npm run improve` reads training misses and extra-call tasks, asks a diagnosis session to use subagents, then has the agent rewrite the skill and commits that edit. It does not re-score before the commit. Run `npm run run-evals` afterward. Keeping an edit only when the train score rises is still a manual choice (`git reset --hard HEAD~1` drops it).
 
 ## Loop
 
