@@ -248,23 +248,36 @@ export interface TurnResult {
  * so tasks in the same session don't see each other.
  * createTurnStream: https://trueforge.dev/api/use-agent#create-and-stream-a-turn
  */
+export interface LooseTurnEvent {
+  type: string;
+  turnId?: string;
+  state?: { status: string; output?: unknown; message?: string };
+}
+
+/** Keep turn.created and turn.done. Every other event type is ignored. */
+export async function consumeTurnEvents(events: AsyncIterable<LooseTurnEvent> | Iterable<LooseTurnEvent>): Promise<TurnResult> {
+  let turnId = "";
+  for await (const event of events) {
+    if (event.type === "turn.created" && event.turnId) turnId = event.turnId;
+    else if (event.type === "turn.done" && event.state) {
+      const s = event.state;
+      if (s.status === "done") return { turnId, status: s.status, text: messageText(s.output as Parameters<typeof messageText>[0]) };
+      if (s.status === "error") return { turnId, status: s.status, text: "", error: s.message };
+      return { turnId, status: s.status, text: "" };
+    }
+  }
+  return { turnId, status: "no-turn-done", text: "" };
+}
+
 export async function runTurn(tf: TrueForge, sessionId: string, content: string, root = true): Promise<TurnResult> {
   const stream = await tf.sessions.createTurnStream(
     sessionId,
     { input: [{ type: "user.message", content }], ...(root ? { previousTurnId: "none" } : {}) },
     { maxRetries: 0 }, // a retried POST would start a second turn
   );
-  let turnId = "";
-  for await (const { data: event } of stream.withMetadata()) {
-    if (event.type === "turn.created") turnId = event.turnId;
-    if (event.type === "turn.done") {
-      const s = event.state;
-      if (s.status === "done") return { turnId, status: s.status, text: messageText(s.output) };
-      if (s.status === "error") return { turnId, status: s.status, text: "", error: s.message };
-      return { turnId, status: s.status, text: "" };
-    }
-  }
-  return { turnId, status: "no-turn-done", text: "" };
+  const events: LooseTurnEvent[] = [];
+  for await (const { data: event } of stream.withMetadata()) events.push(event);
+  return consumeTurnEvents(events);
 }
 
 /**
