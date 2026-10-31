@@ -1,0 +1,9 @@
+{
+  "id": "04-amira-owed",
+  "title": "Amira amount owed",
+  "holdout": false,
+  "question": "How much does Amira Ben Ali still owe FitForge Lac, in TND? Count open invoices only. Answer with a number.",
+  "answer_type": "number",
+  "answer": 25,
+  "best_calls": 2
+}

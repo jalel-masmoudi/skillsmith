@@ -1,0 +1,9 @@
+{
+  "id": "05-lac-classes-15-mar",
+  "title": "Lac classes on 15 March",
+  "holdout": false,
+  "question": "How many classes at FitForge Lac start on 15 March 2026 (Africa/Tunis) and are not cancelled? Answer with a number.",
+  "answer_type": "number",
+  "answer": 3,
+  "best_calls": 2
+}

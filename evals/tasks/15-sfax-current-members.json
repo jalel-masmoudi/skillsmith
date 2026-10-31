@@ -1,0 +1,9 @@
+{
+  "id": "15-sfax-current-members",
+  "title": "Current members at Sfax",
+  "holdout": true,
+  "question": "How many current members does FitForge Sfax have? Current means status active and no deletion timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 5,
+  "best_calls": 3
+}

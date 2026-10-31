@@ -1,0 +1,766 @@
+{
+  "seed": 20260315,
+  "page_size": 5,
+  "gyms": [
+    {
+      "id": "gym_lac",
+      "name": "FitForge Lac",
+      "city": "Tunis",
+      "status": "open"
+    },
+    {
+      "id": "gym_sfax",
+      "name": "FitForge Sfax",
+      "city": "Sfax",
+      "status": "open"
+    },
+    {
+      "id": "gym_sousse",
+      "name": "FitForge Sousse",
+      "city": "Sousse",
+      "status": "open"
+    },
+    {
+      "id": "gym_ariana",
+      "name": "FitForge Ariana",
+      "city": "Ariana",
+      "status": "closed"
+    }
+  ],
+  "members": [
+    {
+      "id": "mem_01",
+      "gym_id": "gym_lac",
+      "full_name": "Amira Ben Ali",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_02",
+      "gym_id": "gym_lac",
+      "full_name": "Youssef Hammami",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_03",
+      "gym_id": "gym_lac",
+      "full_name": "Sami Jaziri",
+      "status": "cancelled",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_04",
+      "gym_id": "gym_lac",
+      "full_name": "Nour El Houda",
+      "status": "active",
+      "deleted_at": "2026-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "mem_05",
+      "gym_id": "gym_lac",
+      "full_name": "Ines Gharbi",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_06",
+      "gym_id": "gym_lac",
+      "full_name": "Karim Mejri",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_07",
+      "gym_id": "gym_lac",
+      "full_name": "Leila Bouzid",
+      "status": "frozen",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_08",
+      "gym_id": "gym_lac",
+      "full_name": "Omar Cherif",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_09",
+      "gym_id": "gym_lac",
+      "full_name": "Hedi Mansour",
+      "status": "cancelled",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_10",
+      "gym_id": "gym_lac",
+      "full_name": "Amina Sfar",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_11",
+      "gym_id": "gym_lac",
+      "full_name": "Yassine Toumi",
+      "status": "active",
+      "deleted_at": "2026-02-01T00:00:00.000Z"
+    },
+    {
+      "id": "mem_12",
+      "gym_id": "gym_sfax",
+      "full_name": "Youssef Hammami",
+      "status": "frozen",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_13",
+      "gym_id": "gym_sfax",
+      "full_name": "Hayet Khemiri",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_14",
+      "gym_id": "gym_sfax",
+      "full_name": "Bilel Trabelsi",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_15",
+      "gym_id": "gym_sfax",
+      "full_name": "Rania Souissi",
+      "status": "cancelled",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_16",
+      "gym_id": "gym_sfax",
+      "full_name": "Ahmed Ben Youssef",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_17",
+      "gym_id": "gym_sfax",
+      "full_name": "Mariem Dali",
+      "status": "active",
+      "deleted_at": "2026-01-20T00:00:00.000Z"
+    },
+    {
+      "id": "mem_18",
+      "gym_id": "gym_sfax",
+      "full_name": "Chaima Briki",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_19",
+      "gym_id": "gym_sfax",
+      "full_name": "Zied Arfaoui",
+      "status": "frozen",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_20",
+      "gym_id": "gym_sfax",
+      "full_name": "Nadia Jmal",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_21",
+      "gym_id": "gym_sfax",
+      "full_name": "Fares Belhadj",
+      "status": "cancelled",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_22",
+      "gym_id": "gym_sousse",
+      "full_name": "Sarra Jebali",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_23",
+      "gym_id": "gym_sousse",
+      "full_name": "Mehdi Khelifi",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_24",
+      "gym_id": "gym_sousse",
+      "full_name": "Fatma Ayari",
+      "status": "active",
+      "deleted_at": "2026-02-02T00:00:00.000Z"
+    },
+    {
+      "id": "mem_25",
+      "gym_id": "gym_sousse",
+      "full_name": "Anis Guesmi",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_26",
+      "gym_id": "gym_ariana",
+      "full_name": "Walid Hamdi",
+      "status": "active",
+      "deleted_at": null
+    },
+    {
+      "id": "mem_27",
+      "gym_id": "gym_ariana",
+      "full_name": "Sonia Rekik",
+      "status": "cancelled",
+      "deleted_at": null
+    }
+  ],
+  "classes": [
+    {
+      "id": "cls_sunrise",
+      "gym_id": "gym_lac",
+      "name": "Sunrise HIIT",
+      "instructor": "Ines Chaabane",
+      "starts_at": "2026-03-14T23:30:00.000Z",
+      "duration_min": 45,
+      "capacity": 12,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_yoga",
+      "gym_id": "gym_lac",
+      "name": "Morning Yoga",
+      "instructor": "Sarra Ben Romdhane",
+      "starts_at": "2026-03-15T07:00:00.000Z",
+      "duration_min": 60,
+      "capacity": 10,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_boxe",
+      "gym_id": "gym_lac",
+      "name": "Boxe",
+      "instructor": "Karim Daoud",
+      "starts_at": "2026-03-15T17:00:00.000Z",
+      "duration_min": 60,
+      "capacity": 16,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_aqua",
+      "gym_id": "gym_lac",
+      "name": "Aquagym",
+      "instructor": "Hiba Kacem",
+      "starts_at": "2026-03-15T09:00:00.000Z",
+      "duration_min": 45,
+      "capacity": 12,
+      "status": "cancelled"
+    },
+    {
+      "id": "cls_spin",
+      "gym_id": "gym_lac",
+      "name": "Night Spin",
+      "instructor": "Ines Chaabane",
+      "starts_at": "2026-03-15T23:30:00.000Z",
+      "duration_min": 45,
+      "capacity": 20,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_core",
+      "gym_id": "gym_lac",
+      "name": "Core",
+      "instructor": "Sarra Ben Romdhane",
+      "starts_at": "2026-03-31T23:30:00.000Z",
+      "duration_min": 30,
+      "capacity": 14,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_pilates",
+      "gym_id": "gym_lac",
+      "name": "Pilates",
+      "instructor": "Ines Chaabane",
+      "starts_at": "2026-02-10T09:00:00.000Z",
+      "duration_min": 50,
+      "capacity": 12,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_cardio",
+      "gym_id": "gym_lac",
+      "name": "Cardio",
+      "instructor": "Karim Daoud",
+      "starts_at": "2026-02-20T18:00:00.000Z",
+      "duration_min": 45,
+      "capacity": 18,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_stretch",
+      "gym_id": "gym_lac",
+      "name": "Stretch",
+      "instructor": "Hiba Kacem",
+      "starts_at": "2026-04-02T08:00:00.000Z",
+      "duration_min": 30,
+      "capacity": 12,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_sfax_edge",
+      "gym_id": "gym_sfax",
+      "name": "Cross Training",
+      "instructor": "Nader Sfaxi",
+      "starts_at": "2026-04-01T23:15:00.000Z",
+      "duration_min": 50,
+      "capacity": 16,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_sfax_zumba",
+      "gym_id": "gym_sfax",
+      "name": "Zumba",
+      "instructor": "Rym Ben Ali",
+      "starts_at": "2026-04-02T11:00:00.000Z",
+      "duration_min": 45,
+      "capacity": 20,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_sfax_aqua",
+      "gym_id": "gym_sfax",
+      "name": "Aqua",
+      "instructor": "Rym Ben Ali",
+      "starts_at": "2026-04-02T15:00:00.000Z",
+      "duration_min": 45,
+      "capacity": 12,
+      "status": "cancelled"
+    },
+    {
+      "id": "cls_sfax_late",
+      "gym_id": "gym_sfax",
+      "name": "Yoga Flow",
+      "instructor": "Nader Sfaxi",
+      "starts_at": "2026-04-02T23:30:00.000Z",
+      "duration_min": 60,
+      "capacity": 14,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_sfax_spin",
+      "gym_id": "gym_sfax",
+      "name": "Spin",
+      "instructor": "Nader Sfaxi",
+      "starts_at": "2026-03-01T10:00:00.000Z",
+      "duration_min": 45,
+      "capacity": 16,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_sfax_boxe",
+      "gym_id": "gym_sfax",
+      "name": "Boxe",
+      "instructor": "Nader Sfaxi",
+      "starts_at": "2026-03-15T10:00:00.000Z",
+      "duration_min": 60,
+      "capacity": 16,
+      "status": "scheduled"
+    },
+    {
+      "id": "cls_yoga_sousse",
+      "gym_id": "gym_sousse",
+      "name": "Morning Yoga",
+      "instructor": "Amal Khediri",
+      "starts_at": "2026-04-10T08:00:00.000Z",
+      "duration_min": 60,
+      "capacity": 12,
+      "status": "scheduled"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "bk_01",
+      "class_id": "cls_sunrise",
+      "member_id": "mem_05",
+      "status": "booked",
+      "created_at": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "bk_02",
+      "class_id": "cls_sunrise",
+      "member_id": "mem_10",
+      "status": "booked",
+      "created_at": "2026-03-01T10:05:00.000Z"
+    },
+    {
+      "id": "bk_03",
+      "class_id": "cls_sunrise",
+      "member_id": "mem_04",
+      "status": "cancelled",
+      "created_at": "2026-03-01T10:10:00.000Z"
+    },
+    {
+      "id": "bk_04",
+      "class_id": "cls_yoga",
+      "member_id": "mem_01",
+      "status": "booked",
+      "created_at": "2026-03-01T11:00:00.000Z"
+    },
+    {
+      "id": "bk_05",
+      "class_id": "cls_yoga",
+      "member_id": "mem_02",
+      "status": "booked",
+      "created_at": "2026-03-01T11:05:00.000Z"
+    },
+    {
+      "id": "bk_06",
+      "class_id": "cls_yoga",
+      "member_id": "mem_05",
+      "status": "booked",
+      "created_at": "2026-03-01T11:10:00.000Z"
+    },
+    {
+      "id": "bk_07",
+      "class_id": "cls_yoga",
+      "member_id": "mem_06",
+      "status": "booked",
+      "created_at": "2026-03-01T11:15:00.000Z"
+    },
+    {
+      "id": "bk_08",
+      "class_id": "cls_yoga",
+      "member_id": "mem_08",
+      "status": "booked",
+      "created_at": "2026-03-01T11:20:00.000Z"
+    },
+    {
+      "id": "bk_09",
+      "class_id": "cls_yoga",
+      "member_id": "mem_03",
+      "status": "cancelled",
+      "created_at": "2026-03-01T11:25:00.000Z"
+    },
+    {
+      "id": "bk_10",
+      "class_id": "cls_yoga",
+      "member_id": "mem_07",
+      "status": "cancelled",
+      "created_at": "2026-03-01T11:30:00.000Z"
+    },
+    {
+      "id": "bk_11",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_13",
+      "status": "booked",
+      "created_at": "2026-04-01T09:00:00.000Z"
+    },
+    {
+      "id": "bk_12",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_14",
+      "status": "booked",
+      "created_at": "2026-04-01T09:05:00.000Z"
+    },
+    {
+      "id": "bk_13",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_16",
+      "status": "booked",
+      "created_at": "2026-04-01T09:10:00.000Z"
+    },
+    {
+      "id": "bk_14",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_20",
+      "status": "booked",
+      "created_at": "2026-04-01T09:15:00.000Z"
+    },
+    {
+      "id": "bk_15",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_12",
+      "status": "booked",
+      "created_at": "2026-04-01T09:20:00.000Z"
+    },
+    {
+      "id": "bk_16",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_18",
+      "status": "cancelled",
+      "created_at": "2026-04-01T09:25:00.000Z"
+    },
+    {
+      "id": "bk_17",
+      "class_id": "cls_sfax_zumba",
+      "member_id": "mem_15",
+      "status": "cancelled",
+      "created_at": "2026-04-01T09:30:00.000Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv_01",
+      "member_id": "mem_01",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-02T08:00:00.000Z",
+      "amount_millimes": 120000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_02",
+      "member_id": "mem_08",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-02-28T23:30:00.000Z",
+      "amount_millimes": 45000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_03",
+      "member_id": "mem_05",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-10T08:30:00.000Z",
+      "amount_millimes": 90000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_04",
+      "member_id": "mem_02",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-20T14:00:00.000Z",
+      "amount_millimes": 80000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_05",
+      "member_id": "mem_07",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-12T10:00:00.000Z",
+      "amount_millimes": 60000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_06",
+      "member_id": "mem_06",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-31T23:30:00.000Z",
+      "amount_millimes": 30000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_07",
+      "member_id": "mem_10",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-25T07:30:00.000Z",
+      "amount_millimes": 75000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_08",
+      "member_id": "mem_01",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-18T14:00:00.000Z",
+      "amount_millimes": 25000,
+      "status": "open",
+      "description": "drop-in"
+    },
+    {
+      "id": "inv_09",
+      "member_id": "mem_03",
+      "gym_id": "gym_lac",
+      "issued_at": "2026-03-08T09:00:00.000Z",
+      "amount_millimes": 15000,
+      "status": "void",
+      "description": "drop-in"
+    },
+    {
+      "id": "inv_10",
+      "member_id": "mem_22",
+      "gym_id": "gym_sousse",
+      "issued_at": "2026-03-31T21:00:00.000Z",
+      "amount_millimes": 20000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_11",
+      "member_id": "mem_22",
+      "gym_id": "gym_sousse",
+      "issued_at": "2026-03-31T23:20:00.000Z",
+      "amount_millimes": 100000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_12",
+      "member_id": "mem_23",
+      "gym_id": "gym_sousse",
+      "issued_at": "2026-04-15T09:00:00.000Z",
+      "amount_millimes": 50000,
+      "status": "paid",
+      "description": "membership"
+    },
+    {
+      "id": "inv_13",
+      "member_id": "mem_25",
+      "gym_id": "gym_sousse",
+      "issued_at": "2026-04-30T22:00:00.000Z",
+      "amount_millimes": 40000,
+      "status": "paid",
+      "description": "membership"
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay_01",
+      "invoice_id": "inv_01",
+      "member_id": "mem_01",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-03-02T08:05:00.000Z",
+      "amount_millimes": 120000,
+      "method": "card"
+    },
+    {
+      "id": "pay_02",
+      "invoice_id": "inv_02",
+      "member_id": "mem_08",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-02-28T23:35:00.000Z",
+      "amount_millimes": 45000,
+      "method": "cash"
+    },
+    {
+      "id": "pay_03",
+      "invoice_id": "inv_03",
+      "member_id": "mem_05",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-03-10T09:00:00.000Z",
+      "amount_millimes": 90000,
+      "method": "card"
+    },
+    {
+      "id": "pay_04",
+      "invoice_id": "inv_04",
+      "member_id": "mem_02",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-03-20T15:00:00.000Z",
+      "amount_millimes": 80000,
+      "method": "card"
+    },
+    {
+      "id": "pay_05",
+      "invoice_id": "inv_05",
+      "member_id": "mem_07",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-03-12T11:00:00.000Z",
+      "amount_millimes": 60000,
+      "method": "cash"
+    },
+    {
+      "id": "pay_06",
+      "invoice_id": "inv_06",
+      "member_id": "mem_06",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-03-31T23:40:00.000Z",
+      "amount_millimes": 30000,
+      "method": "card"
+    },
+    {
+      "id": "pay_07",
+      "invoice_id": "inv_07",
+      "member_id": "mem_10",
+      "gym_id": "gym_lac",
+      "paid_at": "2026-03-25T08:00:00.000Z",
+      "amount_millimes": 75000,
+      "method": "card"
+    },
+    {
+      "id": "pay_08",
+      "invoice_id": "inv_10",
+      "member_id": "mem_22",
+      "gym_id": "gym_sousse",
+      "paid_at": "2026-03-31T22:00:00.000Z",
+      "amount_millimes": 20000,
+      "method": "card"
+    },
+    {
+      "id": "pay_09",
+      "invoice_id": "inv_11",
+      "member_id": "mem_22",
+      "gym_id": "gym_sousse",
+      "paid_at": "2026-03-31T23:30:00.000Z",
+      "amount_millimes": 100000,
+      "method": "card"
+    },
+    {
+      "id": "pay_10",
+      "invoice_id": "inv_12",
+      "member_id": "mem_23",
+      "gym_id": "gym_sousse",
+      "paid_at": "2026-04-15T10:00:00.000Z",
+      "amount_millimes": 50000,
+      "method": "cash"
+    },
+    {
+      "id": "pay_11",
+      "invoice_id": "inv_13",
+      "member_id": "mem_25",
+      "gym_id": "gym_sousse",
+      "paid_at": "2026-04-30T22:30:00.000Z",
+      "amount_millimes": 40000,
+      "method": "card"
+    }
+  ],
+  "refunds": [
+    {
+      "id": "ref_01",
+      "payment_id": "pay_01",
+      "member_id": "mem_01",
+      "gym_id": "gym_lac",
+      "refunded_at": "2026-03-05T10:00:00.000Z",
+      "amount_millimes": 15000
+    },
+    {
+      "id": "ref_02",
+      "payment_id": "pay_04",
+      "member_id": "mem_02",
+      "gym_id": "gym_lac",
+      "refunded_at": "2026-03-21T09:00:00.000Z",
+      "amount_millimes": 80000
+    },
+    {
+      "id": "ref_03",
+      "payment_id": "pay_07",
+      "member_id": "mem_10",
+      "gym_id": "gym_lac",
+      "refunded_at": "2026-04-02T10:00:00.000Z",
+      "amount_millimes": 25000
+    },
+    {
+      "id": "ref_04",
+      "payment_id": "pay_09",
+      "member_id": "mem_22",
+      "gym_id": "gym_sousse",
+      "refunded_at": "2026-04-05T12:00:00.000Z",
+      "amount_millimes": 10000
+    },
+    {
+      "id": "ref_05",
+      "payment_id": "pay_11",
+      "member_id": "mem_25",
+      "gym_id": "gym_sousse",
+      "refunded_at": "2026-05-01T00:30:00.000Z",
+      "amount_millimes": 40000
+    }
+  ]
+}

@@ -4,94 +4,107 @@
 //   npm run score -- runs/run-01     re-score a saved run from its results.json
 //   npm run score -- --selftest      check the scorer on perfect, empty and noisy answers
 //
-// Per task:  points = caught - 0.5 * noise   (floored at 0), divided by the number of expected issues → 0..1
-//   caught = expected issues the agent found: same category, line within ±1
-//   noise  = findings that match no expected issue (including duplicates)
-// Run score = 100 × the mean task score → 0..100.
-// A task "passes" when every expected issue is caught with zero noise.
+// Per question:
+//   wrong (or unparseable) → 0
+//   correct → 0.8 + 0.2 * min(1, best_calls / actual_calls)
+// Text is an exact match after normalization. Numbers match within ±0.01.
+// actual_calls of 0 makes the ratio 1, because best/0 is unbounded and the ratio is capped.
+// Run score = 100 × the mean task score.
+// A task passes when the answer is correct and the call ratio is 1.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const LINE_TOLERANCE = 1;
-export const NOISE_PENALTY = 0.5;
+export const NUMERIC_TOLERANCE = 0.01;
 
-export interface Expected {
-  line: number;
-  categories: string[];
-  why: string;
-}
 export interface ScoredTask {
   id: string;
   title: string;
   holdout?: boolean;
-  expected: Expected[];
+  question: string;
+  answer_type: "number" | "text";
+  answer: number | string;
+  best_calls: number;
 }
-export interface Finding {
-  line: number;
-  category: string;
-  comment?: string;
-}
+
 export interface TaskScore {
   task_id: string;
   holdout: boolean;
   score: number; // 0..1
   passed: boolean;
   parsed: boolean;
-  caught: Expected[];
-  missed: Expected[];
-  noise: Finding[];
+  correct: boolean;
+  best_calls: number;
+  actual_calls: number;
 }
 
-/** The findings from the agent's reply: the last ```json block, or the whole reply if it is bare JSON. */
-export function parseFindings(reply: string): Finding[] | null {
-  const blocks = [...reply.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m) => m[1]);
-  const candidates = blocks.length ? [blocks[blocks.length - 1]] : [reply];
-  for (const c of candidates) {
-    try {
-      const obj = JSON.parse(c.trim());
-      if (!obj || !Array.isArray(obj.findings)) return null;
-      return obj.findings
-        .filter((f: unknown) => f && typeof f === "object")
-        .map((f: Record<string, unknown>) => ({
-          line: Number(f.line),
-          category: String(f.category ?? "").toLowerCase().trim(),
-          comment: typeof f.comment === "string" ? f.comment : undefined,
-        }));
-    } catch {
-      return null;
-    }
-  }
+/** Trim, casefold, collapse whitespace, and normalize spaces around commas. */
+export function normalizeText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s*,\s*/g, ", ").replace(/\s+/g, " ").trim();
+}
+
+export function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value.trim());
   return null;
 }
 
-export function scoreTask(task: ScoredTask, reply: string): TaskScore {
-  const findings = parseFindings(reply);
-  const base = { task_id: task.id, holdout: !!task.holdout };
-  if (findings === null) {
-    return { ...base, score: 0, passed: false, parsed: false, caught: [], missed: [...task.expected], noise: [] };
+/** The `answer` field from the last ```json block, or from a bare JSON object. */
+export function parseAnswer(reply: string): unknown {
+  const blocks = [...reply.matchAll(/```json\s*([\s\S]*?)```/g)].map((m) => m[1]);
+  const candidates = blocks.length ? [blocks[blocks.length - 1]] : [reply.trim() ? [reply] : []].flat();
+  for (const c of candidates) {
+    try {
+      const obj = JSON.parse(c.trim()) as unknown;
+      if (obj && typeof obj === "object" && !Array.isArray(obj) && "answer" in obj) {
+        return (obj as { answer: unknown }).answer;
+      }
+    } catch {
+      return undefined;
+    }
   }
-  const open = [...task.expected];
-  const caught: Expected[] = [];
-  const noise: Finding[] = [];
-  for (const f of findings) {
-    const i = open.findIndex(
-      (e) => Math.abs(e.line - f.line) <= LINE_TOLERANCE && e.categories.includes(f.category),
-    );
-    if (i >= 0) caught.push(...open.splice(i, 1));
-    else noise.push(f);
+  return undefined;
+}
+
+export function answersMatch(task: ScoredTask, got: unknown): boolean {
+  if (task.answer_type === "number") {
+    const actual = asNumber(got);
+    const expected = asNumber(task.answer);
+    if (actual == null || expected == null) return false;
+    // 1e-9 absorbs binary dust on the ±0.01 boundary (105.01 - 105 is slightly over 0.01).
+    return Math.abs(actual - expected) <= NUMERIC_TOLERANCE + 1e-9;
   }
-  const points = Math.max(0, caught.length - NOISE_PENALTY * noise.length);
-  const score = task.expected.length ? points / task.expected.length : noise.length ? 0 : 1;
+  if (typeof got !== "string" && typeof got !== "number") return false;
+  return normalizeText(String(got)) === normalizeText(String(task.answer));
+}
+
+/** Ratio capped at 1. A non-positive actual call count yields 1 (best/0 is unbounded). */
+export function callRatio(best: number, actual: number): number {
+  if (!(actual > 0)) return 1;
+  return Math.min(1, best / actual);
+}
+
+export function scoreTask(task: ScoredTask, reply: string, actualCalls = task.best_calls): TaskScore {
+  const base = {
+    task_id: task.id,
+    holdout: !!task.holdout,
+    best_calls: task.best_calls,
+    actual_calls: actualCalls,
+  };
+  const got = parseAnswer(reply);
+  if (got === undefined) {
+    return { ...base, score: 0, passed: false, parsed: false, correct: false };
+  }
+  const correct = answersMatch(task, got);
+  const ratio = callRatio(task.best_calls, actualCalls);
+  const score = correct ? 0.8 + 0.2 * ratio : 0;
   return {
     ...base,
     score: round(score, 4),
-    passed: open.length === 0 && noise.length === 0,
+    passed: correct && ratio === 1,
     parsed: true,
-    caught,
-    missed: open,
-    noise,
+    correct,
   };
 }
 
@@ -114,21 +127,19 @@ function loadTasks(): ScoredTask[] {
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .sort()
-    .map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
+    .map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")) as ScoredTask);
 }
 
-function reply(findings: Finding[]): string {
-  return "Review done.\n\n```json\n" + JSON.stringify({ findings }, null, 2) + "\n```\n";
+function reply(answer: number | string): string {
+  return "```json\n" + JSON.stringify({ answer }) + "\n```\n";
 }
 
 function selftest(): void {
   const tasks = loadTasks();
-  const perfect = tasks.map((t) => scoreTask(t, reply(t.expected.map((e) => ({ line: e.line, category: e.categories[0] })))));
-  const empty = tasks.map((t) => scoreTask(t, reply([])));
+  const perfect = tasks.map((t) => scoreTask(t, reply(t.answer), t.best_calls));
+  const empty = tasks.map((t) => scoreTask(t, reply(t.answer_type === "number" ? -1 : "___nope___"), t.best_calls));
   const garbage = tasks.map((t) => scoreTask(t, "I could not find anything."));
-  const noisy = tasks.map((t) =>
-    scoreTask(t, reply([...t.expected.map((e) => ({ line: e.line + 1, category: e.categories[0] })), { line: 1, category: "bug" }])),
-  );
+  const costly = tasks.map((t) => scoreTask(t, reply(t.answer), t.best_calls * 2));
   const check = (name: string, got: number, want: number) => {
     const ok = got === want;
     console.log(`${ok ? "ok  " : "FAIL"} ${name}: ${got}${ok ? "" : ` (want ${want})`}`);
@@ -136,21 +147,45 @@ function selftest(): void {
   };
   check("perfect answers score", scoreRun(perfect).score, 100);
   check("perfect answers pass", scoreRun(perfect).tasks_passed, tasks.length);
-  check("empty answers score", scoreRun(empty).score, 0);
+  check("wrong answers score", scoreRun(empty).score, 0);
   check("unparseable answers score", scoreRun(garbage).score, 0);
-  const wantNoisy = round(100 * (tasks.reduce((s, t) => s + (t.expected.length - NOISE_PENALTY) / t.expected.length, 0) / tasks.length), 2);
-  check("all caught (line ±1) + one noise", scoreRun(noisy).score, wantNoisy);
+  check("correct but twice the calls", scoreRun(costly).score, 90);
+
+  const sample = tasks.find((t) => t.answer_type === "number");
+  if (!sample || typeof sample.answer !== "number") {
+    console.log("FAIL no numeric task");
+    process.exitCode = 1;
+    return;
+  }
+  check("tolerance includes +0.01", scoreTask(sample, reply(sample.answer + 0.01)).score, 1);
+  check("tolerance rejects +0.02", scoreTask(sample, reply(sample.answer + 0.02)).score, 0);
+  const text = tasks.find((t) => t.answer_type === "text" && String(t.answer).includes(","));
+  if (!text) {
+    console.log("FAIL no list answer");
+    process.exitCode = 1;
+    return;
+  }
+  const sloppy = String(text.answer).toUpperCase().replace(", ", ",");
+  check("normalized text matches", scoreTask(text, reply(sloppy)).score, 1);
 }
 
 function rescore(dir: string): void {
-  const results = JSON.parse(readFileSync(join(resolve(dir), "results.json"), "utf8")) as { task_id: string; reply: string }[];
+  const results = JSON.parse(readFileSync(join(resolve(dir), "results.json"), "utf8")) as {
+    task_id: string;
+    reply: string;
+    actual_calls?: number;
+  }[];
   const tasks = new Map(loadTasks().map((t) => [t.id, t]));
   const scored = results.map((r) => {
     const t = tasks.get(r.task_id);
     if (!t) throw new Error(`unknown task ${r.task_id}`);
-    return scoreTask(t, r.reply);
+    return scoreTask(t, r.reply, r.actual_calls ?? t.best_calls);
   });
-  for (const s of scored) console.log(`${s.passed ? "pass" : "    "} ${s.task_id.padEnd(24)} ${s.score.toFixed(2)}  caught ${s.caught.length}, missed ${s.missed.length}, noise ${s.noise.length}`);
+  for (const s of scored) {
+    console.log(
+      `${s.passed ? "pass" : "    "} ${s.task_id.padEnd(28)} ${s.score.toFixed(2)}  ${s.correct ? "ok" : "wrong"}  calls ${s.actual_calls}/${s.best_calls}`,
+    );
+  }
   console.log(JSON.stringify(scoreRun(scored)));
 }
 

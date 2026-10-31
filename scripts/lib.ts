@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TrueForge, TrueForgeApi } from "@truefoundry/trueforge-sdk";
+import { TOOL_NAMES } from "../mcp/tools.ts";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const AGENT_DIR = join(ROOT, "agent");
@@ -122,12 +123,15 @@ export function buildManifest(gitRef?: string): TrueForgeApi.AgentSpec {
     askUserQuestions: { enabled: false }, // evals run unattended: never pause for a question
     generativeUi: { enabled: false }, // we want plain text + JSON back
   };
+  const mcpServers: TrueForgeApi.McpServer[] = [
+    { name: "fitforge", enableTools: ["@all"], preload: true, requireApprovalForTools: [] },
+  ];
   if (mode === "inline") {
     // Simplest path, no sandbox: the playbook lives in the instructions, and the agent rewrites it.
     const inlined = skills
       .map((s) => `\n\n---\n\n# Skill: ${s.name}\n\n_${s.description}_\n\n${s.body.trim()}`)
       .join("");
-    return { model: agent.model, instructions: instructions.trim() + inlined, config };
+    return { model: agent.model, instructions: instructions.trim() + inlined, config, mcpServers };
   }
   // "git" mode: real TrueForge skills, cloned from this repo at the commit that runs (needs a sandbox).
   if (!gitRef) die("skill_mode git needs a git ref");
@@ -135,6 +139,7 @@ export function buildManifest(gitRef?: string): TrueForgeApi.AgentSpec {
     model: agent.model,
     instructions: instructions.trim(),
     skills: skills.map((s) => ({ name: s.name })),
+    mcpServers,
     config: { ...config, sandbox: { enabled: true } }, // skills require the sandbox
   };
 }
@@ -143,8 +148,21 @@ export function buildManifest(gitRef?: string): TrueForgeApi.AgentSpec {
  * Create or update the TrueForge agent so it matches agent/ at `gitRef`.
  * agents.create / agents.update / agents.list: https://trueforge.dev/create-agent/overview#create-an-agent-via-the-api
  */
+export function gymMcpUrl(): string {
+  return process.env.GYM_MCP_URL ?? "http://127.0.0.1:8787/mcp";
+}
+
 export async function syncAgent(tf: TrueForge, gitRef: string): Promise<TrueForgeApi.Agent> {
   const { agent, skills } = readAgent();
+  // Remote HTTP MCP. TrueForge does not start the process; `npm run mcp` does. Unverified against a live server.
+  await tf.settings.mcpServers.createOrUpdate({
+    manifest: {
+      description: "FitForge gyms, members, classes, bookings, and billing.",
+      name: "fitforge",
+      type: "remote",
+      url: gymMcpUrl(),
+    },
+  });
   if ((agent.skill_mode ?? "inline") === "git") {
     if (!env.repoUrl) die("skill_mode is \"git\": set SKILL_REPO_URL in .env to your public GitHub repo URL.");
     const { data: caps } = await tf.server.getCapabilities();
@@ -187,11 +205,11 @@ export interface Task {
   title: string;
   /** Holdout tasks are run and scored, but improve never shows them to the agent. */
   holdout?: boolean;
-  language: string;
-  filename: string;
-  context: string;
-  code: string[];
-  expected: { line: number; categories: string[]; why: string }[];
+  question: string;
+  answer_type: "number" | "text";
+  answer: number | string;
+  /** Length of a short correct tool sequence. The scorer uses it as best_calls. */
+  best_calls: number;
 }
 
 export function loadTasks(): Task[] {
@@ -201,22 +219,9 @@ export function loadTasks(): Task[] {
     .map((f) => JSON.parse(readFileSync(join(TASKS_DIR, f), "utf8")) as Task);
 }
 
-export function numbered(code: string[]): string {
-  const w = String(code.length).length;
-  return code.map((l, i) => `${String(i + 1).padStart(w)} | ${l}`).join("\n");
-}
-
-/** The message the agent gets for one task. Same text every run. */
+/** The message the agent gets for one task. Same text every run. The answer stays out of it. */
 export function taskPrompt(t: Task): string {
-  return [
-    `Review this change. File: \`${t.filename}\`. What the change does: ${t.context}`,
-    "",
-    "Line numbers are on the left of the `|`.",
-    "",
-    "```" + t.language,
-    numbered(t.code),
-    "```",
-  ].join("\n");
+  return t.question;
 }
 
 // ---------- turns and sessions ----------
@@ -280,6 +285,27 @@ export async function exportSession(tf: TrueForge, sessionId: string) {
 export type SessionExport = Awaited<ReturnType<typeof exportSession>>;
 
 /** Tokens and tool calls for a whole session, from its export. */
+const GYM_TOOLS = new Set(TOOL_NAMES);
+
+/** MCP tool calls on one turn's events. System tools are not counted. */
+export function countMcpToolCalls(events: readonly { type: string }[]): number {
+  let n = 0;
+  for (const e of events) {
+    if (e.type !== "model.message") continue;
+    const calls = (e as { toolCalls?: { function?: { name?: string }; toolInfo?: { type?: string } }[] }).toolCalls;
+    if (!calls) continue;
+    for (const c of calls) {
+      if (c.toolInfo?.type === "mcp" || (c.function?.name != null && GYM_TOOLS.has(c.function.name))) n++;
+    }
+  }
+  return n;
+}
+
+export function mcpCallsForTurn(exp: SessionExport, turnId: string): number {
+  const turn = exp.turns.find((t) => t.id === turnId);
+  return turn ? countMcpToolCalls(turn.events) : 0;
+}
+
 export function sessionStats(exp: SessionExport): { tokens: number; toolCalls: number } {
   let tokens = 0;
   let toolCalls = 0;

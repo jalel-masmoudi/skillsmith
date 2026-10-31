@@ -1,0 +1,9 @@
+{
+  "id": "16-sousse-april-net",
+  "title": "Sousse April net collected",
+  "holdout": true,
+  "question": "What is the net amount collected at FitForge Sousse during April 2026, Africa/Tunis time, in TND? Net means payments minus refunds, using each record's own timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 180,
+  "best_calls": 3
+}

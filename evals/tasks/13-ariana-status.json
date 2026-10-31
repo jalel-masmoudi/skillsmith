@@ -1,0 +1,9 @@
+{
+  "id": "13-ariana-status",
+  "title": "Ariana gym status",
+  "holdout": false,
+  "question": "What is the status of the FitForge Ariana gym? Answer with the status.",
+  "answer_type": "text",
+  "answer": "closed",
+  "best_calls": 2
+}

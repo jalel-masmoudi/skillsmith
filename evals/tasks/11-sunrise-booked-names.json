@@ -1,0 +1,9 @@
+{
+  "id": "11-sunrise-booked-names",
+  "title": "Sunrise HIIT booked names",
+  "holdout": false,
+  "question": "Which members have a non-cancelled booking for Sunrise HIIT at FitForge Lac? Answer with full names, comma-separated, alphabetical.",
+  "answer_type": "text",
+  "answer": "Amina Sfar, Ines Gharbi",
+  "best_calls": 4
+}

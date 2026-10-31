@@ -20,10 +20,12 @@ import {
   headSha,
   isClean,
   loadTasks,
+  mcpCallsForTurn,
   readAgent,
   runDir,
   runTurn,
   sessionStats,
+  type TurnResult,
   SUMMARY_CSV,
   syncAgent,
   taskPrompt,
@@ -59,20 +61,25 @@ const { data: session } = await tf.sessions.create({
 await tf.sessions.update(session.id, { title: `eval run ${nn} @ ${agentCommit.slice(0, 7)}` });
 console.log(`  session ${session.id}`);
 
-// 4. Each task is one root turn; score the reply.
-const results = [];
+// 4. Each task is one root turn. Score after export so the call count comes from the session.
+const turns: TurnResult[] = [];
 for (const task of tasks) {
-  process.stdout.write(`  ${task.id.padEnd(24)} `);
+  process.stdout.write(`  ${task.id.padEnd(28)} `);
   const turn = await runTurn(tf, session.id, taskPrompt(task));
-  const scored = scoreTask(task, turn.text);
-  results.push({ ...scored, turn_id: turn.turnId, status: turn.status, error: turn.error, reply: turn.text });
-  console.log(`${turn.status === "done" ? "" : `[${turn.status}${turn.error ? `: ${turn.error}` : ""}] `}${scored.score.toFixed(2)}${scored.passed ? "  pass" : ""}`);
+  turns.push(turn);
+  console.log(turn.status === "done" ? "done" : `[${turn.status}${turn.error ? `: ${turn.error}` : ""}]`);
 }
 const durationS = Math.round((Date.now() - started) / 1000);
-const total = scoreRun(results);
 
-// 5. Save the run.
+// 5. Save the run. MCP call counts come from model.message tool calls on that turn.
 const exp = await exportSession(tf, session.id);
+const results = tasks.map((task, i) => {
+  const turn = turns[i];
+  const scored = scoreTask(task, turn.text, mcpCallsForTurn(exp, turn.turnId));
+  console.log(`  ${task.id.padEnd(28)} ${scored.score.toFixed(2)}${scored.passed ? "  pass" : ""}`);
+  return { ...scored, turn_id: turn.turnId, status: turn.status, error: turn.error, reply: turn.text };
+});
+const total = scoreRun(results);
 const stats = sessionStats(exp);
 writeJson(join(dir, "results.json"), results);
 writeJson(join(dir, "score.json"), { run, session_id: session.id, agent_commit: agentCommit, ...total, ...stats, duration_s: durationS });

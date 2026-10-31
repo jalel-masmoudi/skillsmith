@@ -1,0 +1,9 @@
+{
+  "id": "10-sunrise-local-time",
+  "title": "Sunrise HIIT local time",
+  "holdout": false,
+  "question": "At what time of day does Sunrise HIIT at FitForge Lac start, on the Africa/Tunis clock? Answer HH:MM, 24-hour.",
+  "answer_type": "text",
+  "answer": "00:30",
+  "best_calls": 2
+}

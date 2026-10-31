@@ -1,0 +1,9 @@
+{
+  "id": "18-youssef-lac-status",
+  "title": "Youssef Hammami at Lac",
+  "holdout": true,
+  "question": "What is the membership status of Youssef Hammami at FitForge Lac? Answer with the status.",
+  "answer_type": "text",
+  "answer": "active",
+  "best_calls": 3
+}

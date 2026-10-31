@@ -1,0 +1,9 @@
+{
+  "id": "14-amira-march-net",
+  "title": "Amira March net collected",
+  "holdout": false,
+  "question": "What is Amira Ben Ali's net amount collected at FitForge Lac during March 2026 (Africa/Tunis), in TND? Payments minus refunds, by each record's timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 105,
+  "best_calls": 3
+}

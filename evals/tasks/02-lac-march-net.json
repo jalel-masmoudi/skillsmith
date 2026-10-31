@@ -1,0 +1,9 @@
+{
+  "id": "02-lac-march-net",
+  "title": "Lac March net collected",
+  "holdout": false,
+  "question": "What is the net amount collected at FitForge Lac during March 2026, Africa/Tunis time, in TND? Net means payments minus refunds, using each record's own timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 375,
+  "best_calls": 4
+}

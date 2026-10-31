@@ -1,0 +1,9 @@
+{
+  "id": "03-yoga-bookings",
+  "title": "Morning Yoga bookings",
+  "holdout": false,
+  "question": "How many bookings for Morning Yoga at FitForge Lac on 15 March 2026 (Africa/Tunis) are not cancelled? Answer with a number.",
+  "answer_type": "number",
+  "answer": 5,
+  "best_calls": 3
+}

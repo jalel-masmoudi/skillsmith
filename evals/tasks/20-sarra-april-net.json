@@ -1,0 +1,9 @@
+{
+  "id": "20-sarra-april-net",
+  "title": "Sarra April net collected",
+  "holdout": true,
+  "question": "What is Sarra Jebali's net amount collected at FitForge Sousse during April 2026 (Africa/Tunis), in TND? Payments minus refunds, by each record's timestamp. Answer with a number.",
+  "answer_type": "number",
+  "answer": 90,
+  "best_calls": 3
+}

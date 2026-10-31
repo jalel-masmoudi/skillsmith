@@ -1,0 +1,9 @@
+{
+  "id": "08-nour-current",
+  "title": "Nour El Houda current member",
+  "holdout": false,
+  "question": "Is Nour El Houda a current member of FitForge Lac? Current means status active and no deletion timestamp. Answer yes or no.",
+  "answer_type": "text",
+  "answer": "no",
+  "best_calls": 2
+}
