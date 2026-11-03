@@ -17,11 +17,11 @@
     "mcp": "tsx mcp/server.ts",
     "mcp:stdio": "tsx mcp/server.ts --stdio",
     "generate": "tsx scripts/generate-fitforge.ts",
-    "test": "tsx --test mcp/server.test.ts evals/score.test.ts evals/ground-truth.test.ts scripts/leaks.test.ts scripts/calls.test.ts scripts/improve.test.ts && tsx evals/score.ts --selftest",
+    "test": "tsx --test mcp/server.test.ts evals/score.test.ts evals/ground-truth.test.ts scripts/leaks.test.ts scripts/calls.test.ts scripts/improve.test.ts scripts/turn.test.ts && tsx evals/score.ts --selftest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@truefoundry/trueforge-sdk": "^0.180.0"
+    "@truefoundry/trueforge-sdk": "0.182.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

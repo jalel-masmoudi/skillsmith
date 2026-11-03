@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { execFileSync } from "node:child_process";
-import { classifyTrain, commitChecked, diagnosisPrompt, holdoutHits, improveRun, sanitizeLearned, skillCommitMessage, type Forge, type ResultRow, type TraceSession } from "./improve-loop.ts";
+import { classifyTrain, commitChecked, diagnosisPrompt, holdoutHits, improveRun, sanitizeLearned, skillCommitMessage, toolTrace, type Forge, type ResultRow, type TraceSession } from "./improve-loop.ts";
 import { loadTasks, ROOT } from "./lib.ts";
 
 const tasks = loadTasks();
@@ -25,11 +25,24 @@ description: Working notes for the FitForge tools. Read this before answering a 
 - When counting issued bills, skip rows whose status is void.
 `;
 
+test("a truncated trace keeps the first pagination marker", () => {
+  const page = `{"items":"${"a".repeat(500)}","next_cursor":"NQ"}`;
+  const trace = toolTrace([
+    { type: "tool.response", content: page },
+    { type: "tool.response", content: '{"items":[],"next_cursor":null}' },
+  ]);
+  assert.match(trace, /"next_cursor":"NQ"/);
+  assert.equal(trace.includes('"next_cursor":null'), false);
+  assert.equal(trace.split('"next_cursor":"NQ"').length - 1, 1);
+  assert.equal(toolTrace([{ type: "tool.response", content: '{"next_cursor":"NQ"}' }]), 'result {"next_cursor":"NQ"}');
+});
+
 test("run 1 prompt splits misses from extra calls and hides holdouts", () => {
   const items = classifyTrain(results, byId, session);
   const misses = items.filter((i) => i.kind === "miss").map((i) => i.id).sort();
   const extra = items.filter((i) => i.kind === "extra_calls").map((i) => i.id).sort();
   assert.deepEqual(misses, ["02-lac-march-net", "12-lac-march-invoices"]);
+  for (const id of misses) assert.match(items.find((i) => i.id === id)?.trace ?? "", /"next_cursor":"NQ"/);
   assert.ok(extra.includes("03-yoga-bookings"));
   for (const item of items) {
     assert.equal(item.id.startsWith("15-") || item.id.startsWith("16-") || item.id.startsWith("17-") || item.id.startsWith("18-") || item.id.startsWith("19-") || item.id.startsWith("20-"), false);
@@ -88,7 +101,7 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
       prompts.push(prompt);
       return {
         sessionId: "rewrite_1",
-        text: `<<<FILE agent/skills/fitforge-notes/SKILL.md\n${SAFE_SKILL}\n>>>\n<<<LEARNED\nScale integer money and use local month bounds.\nCo-authored-by: Claude <c@example>\nAgent-Session: fake\n>>>`,
+        text: `<<<FILE agent/skills/fitforge-notes/SKILL.md\n${SAFE_SKILL}\n>>>\n<<<LEARNED\nScale integer money and use local month bounds.\nCo-authored-by: Pat Example <pat@example.com>\nAgent-Session: fake\n>>>`,
       };
     },
   };
@@ -115,7 +128,7 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
     const trailerLines = outcome.message.split("\n").filter((l) => /^(Agent-Session|Co-authored-by|Signed-off-by):/i.test(l));
     assert.deepEqual(trailerLines, ["Agent-Session: rewrite_1"]);
     assert.ok(outcome.message.endsWith("Agent-Session: rewrite_1"));
-    assert.equal(outcome.message.includes("Claude"), false);
+    assert.equal(outcome.message.includes("Pat Example"), false);
     assert.equal(outcome.message.includes("fake"), false);
     assert.match(outcome.message, /Scale integer money/);
     assert.equal(commits.length, 1);
@@ -137,12 +150,13 @@ test("fixture loop writes a skill commit and never sends holdout traces", async 
 });
 
 test("a learned line that is a trailer or a leak is dropped", () => {
-  const nasty = "Co-authored-by: Claude <c@example>\nAgent-Session: fake";
+  const nasty = "Co-authored-by: Pat Example <pat@example.com>\nAgent-Session: fake";
   const msg = skillCommitMessage("01", nasty, "real_session", tasks);
   const trailers = msg.split("\n").filter((l) => /^(Agent-Session|Co-authored-by|Signed-off-by):/i.test(l));
   assert.deepEqual(trailers, ["Agent-Session: real_session"]);
   assert.ok(msg.endsWith("Agent-Session: real_session"));
-  assert.equal(msg.includes("Claude"), false);
+  assert.equal(msg.includes("Pat Example"), false);
+  assert.equal(sanitizeLearned("Follow next_cursor until it is empty.", tasks).includes("next_cursor"), true);
   assert.equal(sanitizeLearned("cursor rewrote the notes", tasks), "(no summary given)");
   assert.equal(sanitizeLearned("Remember gym_lac.", tasks), "(no summary given)");
   assert.equal(sanitizeLearned("a".repeat(250), tasks).length, 200);
@@ -155,7 +169,7 @@ test("commit refuses staged paths outside the skill and the session files", () =
     calls.push(args);
     return execFileSync("git", args, { cwd: root, encoding: "utf8" });
   };
-  const spec = ["agent", "runs/run-01/improve-session.json", "runs/run-01/diagnose-session.json"];
+  const spec = ["agent/skills/fitforge-notes/SKILL.md", "runs/run-01/improve-session.json", "runs/run-01/diagnose-session.json"];
   try {
     git("init", "-q");
     git("config", "user.name", "Med Jalel Masmoudi");
@@ -171,6 +185,10 @@ test("commit refuses staged paths outside the skill and the session files", () =
     writeFileSync(join(root, "notes.txt"), "stray again\n");
     git("add", "notes.txt");
     assert.throws(() => commitChecked(git, "agent: learn from run 01\n\nnote\n\nAgent-Session: abc", spec), /refusing to commit notes.txt/);
+    assert.deepEqual(
+      git("diff", "--cached", "--name-only").split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
+      ["notes.txt"],
+    );
     git("reset", "-q");
     writeFileSync(join(root, "agent/skills/fitforge-notes/SKILL.md"), "notes\n");
     calls.length = 0;
