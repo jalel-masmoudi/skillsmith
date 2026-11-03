@@ -31,6 +31,12 @@ These figures are copied from `runs/summary.csv` and from `score.json` and `resu
 
 Run 2 scored 72.3, which is lower than run 1. The agent then learned again from run 2's misses, and run 3 scored 81.83. That beats 75.96 on the same 20 tasks, the same scorer, and the same model, `truefoundry/tfy-managed-claude-haiku-4-5-20251001`.
 
+The gain is on the training tasks. The mean of tasks 01–14, times 100, is 81.79 on run 1 and 90.02 on run 3. The mean of holdout tasks 15–20, times 100, is 62.37 on run 1 and 62.72 on run 3. Holdout is flat. Both means are taken from the task scores in `results.json`, rounded to two decimals the same way as the run score.
+
+Run 1 used TrueForge SDK 0.180.0, the version the lockfile resolved at that commit. Runs 2 and 3 record `"sdk": "0.182.0"` in `score.json`.
+
+Run 1's 74 tool calls are the session total in `score.json`. The per-task `actual_calls` in `results.json` sum to 73.
+
 The agent's own skill rewrites are [8e11168](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005) and [9e895f2](https://github.com/jalel-masmoudi/skillsmith/commit/9e895f2140ca14b82ef2668abe9aca36c122ed17). The saved runs are [runs/run-01](runs/run-01), [runs/run-02](runs/run-02), and [runs/run-03](runs/run-03).
 
 The first rewrite says to reuse ids from search results, always paginate list operations, and avoid parallel searches when one result already has the id. The second says truncated responses and missing timezone conversion caused the misses, and redundant searches and inefficient filtering chains caused the extra calls.
@@ -64,13 +70,10 @@ On run 3 the answer is still wrong for training task `04-amira-owed` and for hol
 
 ### Reproduce
 
-Leave the gym server running, then set up the agent, let it rewrite the skill, and score again.
+`npm run mcp` blocks. Run it in its own terminal. In another terminal, with `TF_MODEL` set as in the install step:
 
 ```bash
-npm run mcp
-npm run setup
-npm run improve
-npm run run-evals
+npm run setup && npm run improve && npm run run-evals
 ```
 
 ## What the challenge asks
@@ -113,6 +116,12 @@ npm install
 cp .env.example .env
 ```
 
+`agent/agent.json` defaults to `anthropic/claude-sonnet-4-6`. All three runs overrode that default with this line in `.env`:
+
+```
+TF_MODEL=truefoundry/tfy-managed-claude-haiku-4-5-20251001
+```
+
 **2. Check the fixture, the scorer, and the MCP server**
 
 ```bash
@@ -122,7 +131,7 @@ npm run typecheck
 
 `npm run generate` rewrites `data/fitforge.json` and `evals/tasks/*.json`. `npm run generate -- --check` fails if those files drift.
 
-**3. Start the gym API** (leave it running):
+**3. Start the gym API** in its own terminal. This command blocks:
 
 ```bash
 npm run mcp
