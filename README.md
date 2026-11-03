@@ -9,17 +9,69 @@ run the evals ──► score ──► the agent rewrites its own skill ──�
    (TrueForge session)         (committed with Agent-Session: <id>)
 ```
 
-The skill at `agent/skills/fitforge-notes/SKILL.md` is an empty seed. Nothing in that file explains the API. The agent fills it in from its own runs.
+The skill at `agent/skills/fitforge-notes/SKILL.md` started as an empty seed. The agent has filled it in from its own runs. The measured comparison is in [Run 1 vs run 3](#run-1-vs-run-3).
 
 ## Run 1 vs run N
 
-> Fill this in after the first measured runs. Five lines max. Keep the heading: the challenge checks for it.
+- **Task and score:** 20 FitForge questions (14 train, 6 holdout). A wrong answer scores 0. A right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. The run score is `100 ×` the mean.
+- **Run 1 → run N:** Run 1 scored 75.96, run 2 scored 72.3, and run 3 scored 81.83 (`runs/summary.csv`).
+- **The change that did it:** the agent rewrote its skill after run 1 ([8e11168](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005)) and again after run 2 ([9e895f2](https://github.com/jalel-masmoudi/skillsmith/commit/9e895f2140ca14b82ef2668abe9aca36c122ed17)).
+- **What the agent learned:** after run 1, reuse ids from search and paginate every list. After run 2, a cut-off page and a missing timezone conversion were the named causes of the misses.
+- **What still fails:** on run 3, training task 04 and holdout tasks 16 and 20 are still wrong. See [Run 1 vs run 3](#run-1-vs-run-3).
 
-- **Task and score:** 20 FitForge questions (14 train, 6 holdout). Wrong, or a right answer with zero tool calls when the reference uses tools, scores 0. Otherwise a right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. Run score = `100 × mean`.
-- **Run 1 → run N:** Run 1 scored 75.96 (`runs/summary.csv`). A later run has not been counted yet.
-- **The change that did it:** none yet. The skill file is still the empty seed.
-- **What the agent learned:** nothing yet.
-- **What still fails:** training tasks 02 and 12 were wrong. Other training tasks were right but used extra calls. Holdout tasks 16 and 20 were also wrong; `npm run improve` does not show them.
+## Run 1 vs run 3
+
+These figures are copied from `runs/summary.csv` and from `score.json` and `results.json` in each run folder.
+
+| Run | Score | Tasks passed | Tokens | Tool calls | Duration (seconds) | Agent commit |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| [1](runs/run-01) | 75.96 | 6 / 20 | 225321 | 74 | 140 | [`cbc0e20`](https://github.com/jalel-masmoudi/skillsmith/commit/cbc0e208392d55b2c7e5505879f5add1a4cd3dee) |
+| [2](runs/run-02) | 72.3 | 7 / 20 | 243402 | 72 | 138 | [`8e11168`](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005) |
+| [3](runs/run-03) | 81.83 | 8 / 20 | 270312 | 72 | 152 | [`9e895f2`](https://github.com/jalel-masmoudi/skillsmith/commit/9e895f2140ca14b82ef2668abe9aca36c122ed17) |
+
+Run 2 scored 72.3, which is lower than run 1. The agent then learned again from run 2's misses, and run 3 scored 81.83. That beats 75.96 on the same 20 tasks, the same scorer, and the same model, `truefoundry/tfy-managed-claude-haiku-4-5-20251001`.
+
+The agent's own skill rewrites are [8e11168](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005) and [9e895f2](https://github.com/jalel-masmoudi/skillsmith/commit/9e895f2140ca14b82ef2668abe9aca36c122ed17). The saved runs are [runs/run-01](runs/run-01), [runs/run-02](runs/run-02), and [runs/run-03](runs/run-03).
+
+The first rewrite says to reuse ids from search results, always paginate list operations, and avoid parallel searches when one result already has the id. The second says truncated responses and missing timezone conversion caused the misses, and redundant searches and inefficient filtering chains caused the extra calls.
+
+Per-task scores from `results.json`. Tasks 01–14 are training. Tasks 15–20 are held out.
+
+| Task | Split | Run 1 | Run 3 |
+| --- | --- | ---: | ---: |
+| 01-lac-current-members | train | 1 | 1 |
+| 02-lac-march-net | train | 0 | 1 |
+| 03-yoga-bookings | train | 0.9 | 0.92 |
+| 04-amira-owed | train | 0.9333 | 0 |
+| 05-lac-classes-15-mar | train | 1 | 1 |
+| 06-yoga-instructor | train | 0.9 | 0.9333 |
+| 07-youssef-sfax-status | train | 1 | 1 |
+| 08-nour-current | train | 0.9333 | 0.9333 |
+| 09-lac-march-refunds | train | 1 | 1 |
+| 10-sunrise-local-time | train | 0.9 | 0.9333 |
+| 11-sunrise-booked-names | train | 0.9333 | 0.9333 |
+| 12-lac-march-invoices | train | 0 | 1 |
+| 13-ariana-status | train | 1 | 1 |
+| 14-amira-march-net | train | 0.95 | 0.95 |
+| 15-boxe-free-seats | holdout | 0.92 | 0.95 |
+| 16-sousse-april-net | holdout | 0 | 0 |
+| 17-sfax-classes-2-apr | holdout | 1 | 1 |
+| 18-omar-march-method | holdout | 0.9333 | 0.9333 |
+| 19-zumba-booked-names | holdout | 0.8889 | 0.88 |
+| 20-sarra-april-net | holdout | 0 | 0 |
+
+On run 3 the answer is still wrong for training task `04-amira-owed` and for holdout tasks `16-sousse-april-net` and `20-sarra-april-net`. Each of those three scores 0. Task 04 was correct on run 1. Tasks 02 and 12 were wrong on run 1 and score 1 on run 3.
+
+### Reproduce
+
+Leave the gym server running, then set up the agent, let it rewrite the skill, and score again.
+
+```bash
+npm run mcp
+npm run setup
+npm run improve
+npm run run-evals
+```
 
 ## What the challenge asks
 
@@ -38,7 +90,7 @@ The rule: **the agent writes the change.** You can review it, keep it or drop it
 agent/
   agent.json                         name, model, skill_mode (inline)
   instructions.md                    system prompt and the JSON answer contract
-  skills/fitforge-notes/SKILL.md     empty seed; the agent rewrites this
+  skills/fitforge-notes/SKILL.md     notes the agent rewrites from its runs
 mcp/                                 FitForge MCP server (HTTP and stdio) and the frozen rows
 data/fitforge.json                   the same rows, written by npm run generate
 evals/tasks/*.json                   20 questions; answers computed, not typed in
