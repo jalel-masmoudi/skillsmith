@@ -24,6 +24,7 @@ import {
   readAgent,
   runDir,
   runTurn,
+  sdkVersion,
   sessionStats,
   type TurnResult,
   SUMMARY_CSV,
@@ -82,7 +83,7 @@ const results = tasks.map((task, i) => {
 const total = scoreRun(results);
 const stats = sessionStats(exp);
 writeJson(join(dir, "results.json"), results);
-writeJson(join(dir, "score.json"), { run, session_id: session.id, agent_commit: agentCommit, ...total, ...stats, duration_s: durationS });
+writeJson(join(dir, "score.json"), { run, session_id: session.id, agent_commit: agentCommit, sdk: sdkVersion(), ...total, ...stats, duration_s: durationS });
 writeJson(join(dir, "session.json"), exp);
 
 const date = new Date().toISOString().replace(/\.\d+Z$/, "Z");

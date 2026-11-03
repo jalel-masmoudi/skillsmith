@@ -4,6 +4,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TrueForge, TrueForgeApi } from "@truefoundry/trueforge-sdk";
@@ -14,6 +15,11 @@ export const AGENT_DIR = join(ROOT, "agent");
 export const TASKS_DIR = join(ROOT, "evals", "tasks");
 export const RUNS_DIR = join(ROOT, "runs");
 export const SUMMARY_CSV = join(RUNS_DIR, "summary.csv");
+
+export function sdkVersion(): string {
+  const pkg = createRequire(import.meta.url)("@truefoundry/trueforge-sdk/package.json") as { version: string };
+  return pkg.version;
+}
 
 // ---------- config ----------
 
@@ -275,9 +281,9 @@ export async function runTurn(tf: TrueForge, sessionId: string, content: string,
     { input: [{ type: "user.message", content }], ...(root ? { previousTurnId: "none" } : {}) },
     { maxRetries: 0 }, // a retried POST would start a second turn
   );
-  const events: LooseTurnEvent[] = [];
-  for await (const { data: event } of stream.withMetadata()) events.push(event);
-  return consumeTurnEvents(events);
+  return consumeTurnEvents((async function* () {
+    for await (const { data } of stream.withMetadata()) yield data;
+  })());
 }
 
 /**

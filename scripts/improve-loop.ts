@@ -65,10 +65,15 @@ export function toolTrace(events: readonly object[] | undefined): string {
         lines.push(`call ${name} ${c.function?.arguments ?? ""}`.slice(0, 160));
       }
     } else if (rec.type === "tool.response") {
-      lines.push(`result ${String(rec.content ?? "").slice(0, 120)}`);
+      lines.push(`result ${String(rec.content ?? "")}`);
     }
   }
-  return lines.join("\n").slice(0, TRACE_CHARS);
+  const full = lines.join("\n");
+  const sliced = full.slice(0, TRACE_CHARS);
+  if (sliced.length === full.length) return sliced;
+  const marker = full.match(/"next_cursor":("[^"]*"|null)/);
+  if (marker && !sliced.includes(marker[0])) return sliced + marker[0];
+  return sliced;
 }
 
 export function classifyTrain(results: ResultRow[], tasks: Map<string, Task>, session: TraceSession): TrainItem[] {

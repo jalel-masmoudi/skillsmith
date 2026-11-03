@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { execFileSync } from "node:child_process";
-import { classifyTrain, commitChecked, diagnosisPrompt, holdoutHits, improveRun, sanitizeLearned, skillCommitMessage, type Forge, type ResultRow, type TraceSession } from "./improve-loop.ts";
+import { classifyTrain, commitChecked, diagnosisPrompt, holdoutHits, improveRun, sanitizeLearned, skillCommitMessage, toolTrace, type Forge, type ResultRow, type TraceSession } from "./improve-loop.ts";
 import { loadTasks, ROOT } from "./lib.ts";
 
 const tasks = loadTasks();
@@ -25,11 +25,24 @@ description: Working notes for the FitForge tools. Read this before answering a 
 - When counting issued bills, skip rows whose status is void.
 `;
 
+test("a truncated trace keeps the first pagination marker", () => {
+  const page = `{"items":"${"a".repeat(500)}","next_cursor":"NQ"}`;
+  const trace = toolTrace([
+    { type: "tool.response", content: page },
+    { type: "tool.response", content: '{"items":[],"next_cursor":null}' },
+  ]);
+  assert.match(trace, /"next_cursor":"NQ"/);
+  assert.equal(trace.includes('"next_cursor":null'), false);
+  assert.equal(trace.split('"next_cursor":"NQ"').length - 1, 1);
+  assert.equal(toolTrace([{ type: "tool.response", content: '{"next_cursor":"NQ"}' }]), 'result {"next_cursor":"NQ"}');
+});
+
 test("run 1 prompt splits misses from extra calls and hides holdouts", () => {
   const items = classifyTrain(results, byId, session);
   const misses = items.filter((i) => i.kind === "miss").map((i) => i.id).sort();
   const extra = items.filter((i) => i.kind === "extra_calls").map((i) => i.id).sort();
   assert.deepEqual(misses, ["02-lac-march-net", "12-lac-march-invoices"]);
+  for (const id of misses) assert.match(items.find((i) => i.id === id)?.trace ?? "", /"next_cursor":"NQ"/);
   assert.ok(extra.includes("03-yoga-bookings"));
   for (const item of items) {
     assert.equal(item.id.startsWith("15-") || item.id.startsWith("16-") || item.id.startsWith("17-") || item.id.startsWith("18-") || item.id.startsWith("19-") || item.id.startsWith("20-"), false);

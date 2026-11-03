@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TurnStreamingEvent } from "@truefoundry/trueforge-sdk/serialization";
-import { consumeTurnEvents } from "./lib.ts";
+import { consumeTurnEvents, runTurn } from "./lib.ts";
 
 test("unknown stream events are ignored until turn.done", async () => {
   const result = await consumeTurnEvents([
@@ -13,6 +13,30 @@ test("unknown stream events are ignored until turn.done", async () => {
   assert.equal(result.turnId, "t1");
   assert.equal(result.status, "done");
   assert.equal(result.text, "ok");
+});
+
+test("runTurn returns at turn.done and does not read later events", async () => {
+  let afterDone = false;
+  const tf = {
+    sessions: {
+      async createTurnStream() {
+        return {
+          async *withMetadata() {
+            yield { data: { type: "turn.created", turnId: "t1" } };
+            yield { data: { type: "turn.done", state: { status: "done", output: { content: "ok" } } } };
+            afterDone = true;
+            yield { data: { type: "later.event" } };
+            await new Promise(() => {});
+          },
+        };
+      },
+    },
+  };
+  const result = await runTurn(tf as never, "session", "question", false);
+  assert.equal(result.turnId, "t1");
+  assert.equal(result.status, "done");
+  assert.equal(result.text, "ok");
+  assert.equal(afterDone, false);
 });
 
 test("sdk 0.182 parses a context compaction event and rejects an unknown type", () => {
