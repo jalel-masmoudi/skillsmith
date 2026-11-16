@@ -1,3 +1,5 @@
+[![CI](https://github.com/jalel-masmoudi/skillsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/jalel-masmoudi/skillsmith/actions/workflows/ci.yml)
+
 # SkillSmith
 
 An agent that writes its own manual for an API it has never seen. The API is **FitForge**, a fictional Tunisian gym chain, served as a small MCP server with a frozen dataset. The agent answers 20 fixed questions. When it misses, it rewrites its own skill. A later run should score higher on the same questions and the same scorer.
@@ -14,7 +16,7 @@ The skill at `agent/skills/fitforge-notes/SKILL.md` started as an empty seed. Th
 ## Run 1 vs run N
 
 - **Task and score:** 20 FitForge questions (14 train, 6 holdout). A wrong answer scores 0. A right answer scores `0.8 + 0.2 × min(1, best_calls / actual_calls)`. The run score is `100 ×` the mean.
-- **Run 1 → run N:** Run 1 scored 75.96, run 2 scored 72.3, and run 3 scored 81.83 (`runs/summary.csv`).
+- **Run 1 → run N:** The 75.96 → 81.83 gain is run 1 to run 3. Run 2 dipped to 72.30 (`runs/summary.csv`).
 - **The change that did it:** the agent rewrote its skill after run 1 ([8e11168](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005)) and again after run 2 ([9e895f2](https://github.com/jalel-masmoudi/skillsmith/commit/9e895f2140ca14b82ef2668abe9aca36c122ed17)).
 - **What the agent learned:** after run 1, reuse ids from search and paginate every list. After run 2, a cut-off page and a missing timezone conversion were the named causes of the misses.
 - **What still fails:** on run 3, training task 04 and holdout tasks 16 and 20 are still wrong. See [Run 1 vs run 3](#run-1-vs-run-3).
@@ -26,12 +28,12 @@ These figures are copied from `runs/summary.csv` and from `score.json` and `resu
 | Run | Score | Tasks passed | Tokens | Tool calls | Duration (seconds) | Agent commit |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | [1](runs/run-01) | 75.96 | 6 / 20 | 225321 | 74 | 140 | [`cbc0e20`](https://github.com/jalel-masmoudi/skillsmith/commit/cbc0e208392d55b2c7e5505879f5add1a4cd3dee) |
-| [2](runs/run-02) | 72.3 | 7 / 20 | 243402 | 72 | 138 | [`8e11168`](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005) |
+| [2](runs/run-02) | 72.30 | 7 / 20 | 243402 | 72 | 138 | [`8e11168`](https://github.com/jalel-masmoudi/skillsmith/commit/8e111681adf2ab4868d59ea17f6f5fecfe0a7005) |
 | [3](runs/run-03) | 81.83 | 8 / 20 | 270312 | 72 | 152 | [`9e895f2`](https://github.com/jalel-masmoudi/skillsmith/commit/9e895f2140ca14b82ef2668abe9aca36c122ed17) |
 
-Run 2 scored 72.3, which is lower than run 1. The agent then learned again from run 2's misses, and run 3 scored 81.83. That beats 75.96 on the same 20 tasks, the same scorer, and the same model, `truefoundry/tfy-managed-claude-haiku-4-5-20251001`.
+The agent learned again from run 2's misses, and run 3 beats run 1 on the same 20 tasks, the same scorer, and the same model, `truefoundry/tfy-managed-claude-haiku-4-5-20251001`.
 
-The gain is on the training tasks. The mean of tasks 01–14, times 100, is 81.79 on run 1 and 90.02 on run 3. The mean of holdout tasks 15–20, times 100, is 62.37 on run 1 and 62.72 on run 3. Holdout is flat. Both means are taken from the task scores in `results.json`, rounded to two decimals the same way as the run score.
+The gain is on the training tasks. The mean of tasks 01–14, times 100, is 81.79 on run 1 and 90.02 on run 3. Held-out correctness is unchanged (same 4 of 6 right). The mean of holdout tasks 15–20, times 100, stayed flat at 62.37 → 62.72, and the +0.35 comes only from call efficiency. Both means are taken from the task scores in `results.json`, rounded to two decimals the same way as the run score.
 
 Run 1 used TrueForge SDK 0.180.0, the version the lockfile resolved at that commit. Runs 2 and 3 record `"sdk": "0.182.0"` in `score.json`.
 
